@@ -1,0 +1,212 @@
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { createGame, gameReducer } from './engine/rulesEngine';
+import { storage } from './lib/storage';
+import { useAuth } from './lib/auth';
+import { useEntitlements } from './lib/entitlements';
+import { openDisplayChannel, broadcastGameState } from './lib/liveDisplay';
+import { SetupScreen } from './components/SetupScreen';
+import { ScoreboardScreen } from './components/ScoreboardScreen';
+import { SettingsPanel } from './components/SettingsPanel';
+import { HistoryScreen } from './components/HistoryScreen';
+import { AppShell } from './components/AppShell';
+
+const DEFAULT_SETTINGS = {
+  theme: 'minimalist',
+  colorMode: 'system',
+  textSize: 'md',
+  haptics: true,
+  announcementFormat: 'traditional',
+  showCasualTracker: true,
+  voiceURI: null, // null = browser default voice
+  keyBindings: {
+    pointA: 'ArrowLeft',
+    pointB: 'ArrowRight',
+    fault: 'ArrowDown',
+    sideOut: 'Enter',
+    undo: 'Backspace',
+  },
+};
+
+export default function App() {
+  useAuth();
+  useEntitlements();
+
+  const [settings, setSettings] = useState(() => ({ ...DEFAULT_SETTINGS, ...storage.get('pb-settings', {}) }));
+  const [history, setHistory] = useState(() => storage.get('pb-history', []) || []);
+  const [screen, setScreen] = useState('setup');
+  const [historyReturnScreen, setHistoryReturnScreen] = useState('setup');
+  const [showSettings, setShowSettings] = useState(false);
+  const [casualTrackerVisible, setCasualTrackerVisible] = useState(() => {
+    const s = storage.get('pb-settings', {});
+    return (s && s.showCasualTracker) ?? true;
+  });
+  const [invalidFlash, setInvalidFlash] = useState(null);
+  const savedRef = useRef(false);
+
+  const [setupConfig, setSetupConfig] = useState({
+    type: 'doubles',
+    mode: 'traditional',
+    winningScore: 11,
+    gamePointMustServe: true,
+    teamAName: 'Team A',
+    teamBName: 'Team B',
+    firstServer: 'A',
+  });
+
+  const [gameState, setGameState] = useState(() => createGame(setupConfig));
+  const dispatch = useCallback((action) => setGameState((prev) => gameReducer(prev, action)), []);
+
+  // Live sync to a pop-out display window, if one is open. Harmless if
+  // not — postMessage into a BroadcastChannel with no listeners is a
+  // no-op. See src/lib/liveDisplay.js and src/components/DisplayView.jsx.
+  const displayChannelRef = useRef(null);
+  useEffect(() => {
+    displayChannelRef.current = openDisplayChannel();
+    return () => displayChannelRef.current?.close();
+  }, []);
+  useEffect(() => {
+    broadcastGameState(displayChannelRef.current, gameState, settings);
+  }, [gameState, settings]);
+
+  const changeSettings = useCallback((patch) => {
+    setSettings((prev) => {
+      const next = { ...prev, ...patch };
+      storage.set('pb-settings', next);
+      return next;
+    });
+  }, []);
+
+  const changeCasualTrackerVisible = useCallback((v) => {
+    setCasualTrackerVisible(v);
+    changeSettings({ showCasualTracker: v });
+  }, [changeSettings]);
+
+  const [systemDark, setSystemDark] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    setSystemDark(mq.matches);
+    const handler = (e) => setSystemDark(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+  const isDark = settings.colorMode === 'system' ? systemDark : settings.colorMode === 'dark';
+
+  const vibrate = useCallback((pattern) => {
+    if (settings.haptics && navigator.vibrate) navigator.vibrate(pattern);
+  }, [settings.haptics]);
+
+  const onPoint = (team) => {
+    if (gameState.gameOver || gameState.awaitingSideOut) return;
+    if (gameState.config.mode === 'traditional' && team !== gameState.servingTeam) {
+      vibrate(200);
+      setInvalidFlash(team);
+      setTimeout(() => setInvalidFlash(null), 500);
+      return;
+    }
+    dispatch({ type: 'POINT', team });
+  };
+  const onFault = () => dispatch({ type: 'FAULT' });
+  const onSideOut = () => dispatch({ type: 'SIDE_OUT' });
+  const onUndo = () => dispatch({ type: 'UNDO' });
+  const onReset = () => setGameState(createGame(gameState.config));
+
+  const startGame = () => {
+    setGameState(createGame({ ...setupConfig }));
+    setScreen('play');
+  };
+  const onNewGame = () => setScreen('setup');
+
+  useEffect(() => {
+    if (gameState.gameOver && !savedRef.current) {
+      savedRef.current = true;
+      const entry = {
+        id: Date.now().toString(),
+        date: new Date().toISOString(),
+        type: gameState.config.type,
+        mode: gameState.config.mode,
+        teamA: gameState.teamA,
+        teamB: gameState.teamB,
+        winner: gameState.winner,
+        favorite: false,
+      };
+      setHistory((prev) => {
+        const next = [entry, ...prev];
+        storage.set('pb-history', next);
+        return next;
+      });
+    }
+    if (!gameState.gameOver) savedRef.current = false;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameState.gameOver]);
+
+  const toggleFavorite = (id) => {
+    setHistory((prev) => {
+      const next = prev.map((g) => (g.id === id ? { ...g, favorite: !g.favorite } : g));
+      storage.set('pb-history', next);
+      return next;
+    });
+  };
+  const deleteGame = (id) => {
+    setHistory((prev) => {
+      const next = prev.filter((g) => g.id !== id);
+      storage.set('pb-history', next);
+      return next;
+    });
+  };
+  const deleteAllHistory = () => {
+    setHistory([]);
+    storage.set('pb-history', []);
+  };
+
+  return (
+    <div className={isDark ? 'dark' : ''}>
+      <AppShell>
+        {screen === 'setup' && (
+          <SetupScreen
+            setupConfig={setupConfig}
+            setSetupConfig={setSetupConfig}
+            onStart={startGame}
+            onOpenSettings={() => setShowSettings(true)}
+            onOpenHistory={() => { setHistoryReturnScreen('setup'); setScreen('history'); }}
+          />
+        )}
+        {screen === 'play' && (
+          <ScoreboardScreen
+            gameState={gameState}
+            dispatch={dispatch}
+            settings={settings}
+            casualTrackerVisible={casualTrackerVisible}
+            setCasualTrackerVisible={changeCasualTrackerVisible}
+            invalidFlash={invalidFlash}
+            onPoint={onPoint}
+            onFault={onFault}
+            onSideOut={onSideOut}
+            onUndo={onUndo}
+            onReset={onReset}
+            onNewGame={onNewGame}
+            onOpenSettings={() => setShowSettings(true)}
+            onOpenHistory={() => { setHistoryReturnScreen('play'); setScreen('history'); }}
+          />
+        )}
+        {screen === 'history' && (
+          <HistoryScreen
+            history={history}
+            onBack={() => setScreen(historyReturnScreen)}
+            onToggleFavorite={toggleFavorite}
+            onDelete={deleteGame}
+            onDeleteAll={deleteAllHistory}
+          />
+        )}
+        {showSettings && (
+          <SettingsPanel
+            settings={settings}
+            onChange={changeSettings}
+            onClose={() => setShowSettings(false)}
+            casualTrackerVisible={casualTrackerVisible}
+            setCasualTrackerVisible={changeCasualTrackerVisible}
+          />
+        )}
+      </AppShell>
+    </div>
+  );
+}
