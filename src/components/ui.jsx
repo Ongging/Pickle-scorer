@@ -32,7 +32,7 @@ export function ScoreNumeral({ value, theme, sizeClass }) {
     );
   }
   return (
-    <span className={`font-display font-bold tabular-nums ${sizeClass} text-zinc-900 dark:text-white`}>
+    <span className={`font-display font-bold tabular-nums ${sizeClass} text-ink-950 dark:text-white`}>
       {value}
     </span>
   );
@@ -42,10 +42,10 @@ export function SegButton({ active, onClick, children, className = '' }) {
   return (
     <button
       onClick={onClick}
-      className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+      className={`px-3 py-2 rounded-lg text-sm font-display font-medium transition-colors ${
         active
-          ? 'bg-emerald-600 text-white'
-          : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300'
+          ? 'bg-court-600 text-white'
+          : 'bg-ink-100 dark:bg-ink-800 text-ink-600 dark:text-ink-300'
       } ${className}`}
     >
       {children}
@@ -53,14 +53,17 @@ export function SegButton({ active, onClick, children, className = '' }) {
   );
 }
 
-// Two small dots showing serve progress: left dot lights on the 1st
-// serve, both dots lit on the 2nd serve (a filling-up indicator rather
-// than a single dot jumping between positions).
-export function ServeDots({ active }) {
+// The live serve number, shown as an actual numeral rather than a dot —
+// legible at a glance from across the court, and unambiguous to anyone
+// reading over your shoulder ("that's serve 2", not "hm, two dots").
+// optic-yellow is reserved for exactly this one job in the whole app.
+export function ServeNumber({ active, className = '', style }) {
   return (
-    <span className="flex gap-0.5">
-      <span className={`w-1.5 h-1.5 rounded-full ${active >= 1 ? 'bg-emerald-400' : 'bg-zinc-600'}`} />
-      <span className={`w-1.5 h-1.5 rounded-full ${active >= 2 ? 'bg-emerald-400' : 'bg-zinc-600'}`} />
+    <span
+      className={`inline-flex items-center justify-center rounded-full font-display font-bold leading-none tabular-nums ${className}`}
+      style={{ background: '#D6DE22', color: '#1C2408', ...style }}
+    >
+      {active}
     </span>
   );
 }
@@ -69,10 +72,10 @@ export function ToggleRow({ label, description, checked, onChange }) {
   // Inline styles compute the on/off state directly from JS, with zero
   // dependency on the CSS build pipeline.
   return (
-    <div className="flex items-center justify-between py-3 border-b border-zinc-100 dark:border-zinc-800 last:border-b-0">
+    <div className="flex items-center justify-between py-3 border-b border-ink-100 dark:border-ink-800 last:border-b-0">
       <div className="pr-4">
-        <div className="text-sm font-medium text-zinc-900 dark:text-zinc-50">{label}</div>
-        {description && <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">{description}</div>}
+        <div className="text-sm font-medium text-ink-950 dark:text-ink-50">{label}</div>
+        {description && <div className="text-xs text-ink-500 dark:text-ink-400 mt-0.5">{description}</div>}
       </div>
       <button
         onClick={() => onChange(!checked)}
@@ -86,7 +89,7 @@ export function ToggleRow({ label, description, checked, onChange }) {
           border: 'none',
           padding: 0,
           cursor: 'pointer',
-          backgroundColor: checked ? '#059669' : '#a1a1aa',
+          backgroundColor: checked ? '#0F6E68' : '#AAB9B6',
           transition: 'background-color 150ms ease',
         }}
       >

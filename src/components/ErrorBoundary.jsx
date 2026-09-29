@@ -38,22 +38,22 @@ export class ErrorBoundary extends Component {
   render() {
     if (!this.state.error) return this.props.children;
     return (
-      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 flex flex-col items-center justify-center px-6 text-center gap-4">
-        <div className="text-lg font-semibold">Something went wrong</div>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-xs">
+      <div className="min-h-screen bg-ink-50 dark:bg-ink-950 text-ink-950 dark:text-ink-50 flex flex-col items-center justify-center px-6 text-center gap-4">
+        <div className="text-lg font-display font-semibold">Something went wrong</div>
+        <p className="text-sm text-ink-500 dark:text-ink-400 max-w-xs">
           The app hit an unexpected error. Your saved games and settings are
           untouched — try continuing, or reset if it keeps happening.
         </p>
         <div className="flex gap-3">
           <button
             onClick={this.handleReset}
-            className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium"
+            className="px-4 py-2 rounded-xl bg-court-600 text-white text-sm font-display font-medium"
           >
             Try again
           </button>
           <button
             onClick={this.handleResetData}
-            className="px-4 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-sm font-medium"
+            className="px-4 py-2 rounded-xl bg-ink-100 dark:bg-ink-800 text-sm font-display font-medium"
           >
             Reset saved data
           </button>

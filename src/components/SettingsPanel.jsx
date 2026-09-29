@@ -1,24 +1,24 @@
 import { useState, useEffect } from 'react';
 import { X, Sun, Moon, Monitor } from 'lucide-react';
 import { unlockAudioSession } from '../lib/speech';
-import { speakTinyTts, TINY_TTS_VOICE_ID } from '../lib/tinyTts';
+import { speakTinyTts, warmUpTinyTts, TINY_TTS_VOICE_ID } from '../lib/tinyTts';
 import { SegButton, ToggleRow } from './ui';
 
 export function SettingsPanel({ settings, onChange, onClose, casualTrackerVisible, setCasualTrackerVisible }) {
   const [showExplainer, setShowExplainer] = useState(false);
   return (
     <div className="absolute inset-0 bg-black/40 z-30 flex items-end sm:items-center justify-center">
-      <div className="bg-white dark:bg-zinc-900 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[85%] overflow-y-auto overflow-x-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-100 dark:border-zinc-800 sticky top-0 z-10 bg-white dark:bg-zinc-900">
-          <h2 className="font-semibold">Settings</h2>
-          <button onClick={onClose} className="p-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800">
+      <div className="bg-white dark:bg-ink-900 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[85%] overflow-y-auto overflow-x-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-ink-100 dark:border-ink-800 sticky top-0 z-10 bg-white dark:bg-ink-900">
+          <h2 className="font-display font-semibold">Settings</h2>
+          <button onClick={onClose} className="p-1.5 rounded-full bg-ink-100 dark:bg-ink-800">
             <X size={16} />
           </button>
         </div>
 
         <div className="px-5 py-4 space-y-6">
           <section>
-            <div className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-2">Theme</div>
+            <div className="text-xs font-display font-medium text-ink-500 dark:text-ink-400 mb-2">Theme</div>
             <div className="grid grid-cols-3 gap-2">
               {[
                 { id: 'minimalist', label: 'Minimalist' },
@@ -33,7 +33,7 @@ export function SettingsPanel({ settings, onChange, onClose, casualTrackerVisibl
           </section>
 
           <section>
-            <div className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-2">Appearance</div>
+            <div className="text-xs font-display font-medium text-ink-500 dark:text-ink-400 mb-2">Appearance</div>
             <div className="grid grid-cols-3 gap-2">
               <SegButton active={settings.colorMode === 'light'} onClick={() => onChange({ colorMode: 'light' })}>
                 <Sun size={14} className="inline mr-1" /> Light
@@ -48,7 +48,7 @@ export function SettingsPanel({ settings, onChange, onClose, casualTrackerVisibl
           </section>
 
           <section>
-            <div className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-2">Text size</div>
+            <div className="text-xs font-display font-medium text-ink-500 dark:text-ink-400 mb-2">Text size</div>
             <div className="grid grid-cols-3 gap-2">
               <SegButton active={settings.textSize === 'sm'} onClick={() => onChange({ textSize: 'sm' })}>Small</SegButton>
               <SegButton active={settings.textSize === 'md'} onClick={() => onChange({ textSize: 'md' })}>Medium</SegButton>
@@ -56,7 +56,7 @@ export function SettingsPanel({ settings, onChange, onClose, casualTrackerVisibl
             </div>
           </section>
 
-          <section className="bg-zinc-50 dark:bg-zinc-800/50 rounded-xl px-3">
+          <section className="bg-ink-50 dark:bg-ink-800/50 rounded-xl px-3">
             <ToggleRow
               label="Haptic feedback"
               description="Vibrate on invalid actions"
@@ -73,8 +73,8 @@ export function SettingsPanel({ settings, onChange, onClose, casualTrackerVisibl
 
           <section>
             <div className="flex items-center justify-between mb-2">
-              <div className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Announcement format</div>
-              <button onClick={() => setShowExplainer((s) => !s)} className="text-[11px] text-emerald-600 font-medium">
+              <div className="text-xs font-display font-medium text-ink-500 dark:text-ink-400">Announcement format</div>
+              <button onClick={() => setShowExplainer((s) => !s)} className="text-[11px] text-court-600 dark:text-court-400 font-medium">
                 {showExplainer ? 'Hide' : "What's the difference?"}
               </button>
             </div>
@@ -87,21 +87,21 @@ export function SettingsPanel({ settings, onChange, onClose, casualTrackerVisibl
               </SegButton>
             </div>
             {showExplainer && (
-              <div className="mt-2 text-xs text-zinc-500 dark:text-zinc-400 space-y-1.5 bg-zinc-50 dark:bg-zinc-800/50 rounded-lg p-3">
-                <p><span className="font-medium text-zinc-700 dark:text-zinc-300">Traditional:</span> server's score, then receiver's score, then serve number — the official calling order.</p>
-                <p><span className="font-medium text-zinc-700 dark:text-zinc-300">Custom:</span> the score of whichever team just scored, listed first — easier for spectators to follow.</p>
+              <div className="mt-2 text-xs text-ink-500 dark:text-ink-400 space-y-1.5 bg-ink-50 dark:bg-ink-800/50 rounded-lg p-3">
+                <p><span className="font-medium text-ink-700 dark:text-ink-300">Traditional:</span> server's score, then receiver's score, then serve number — the official calling order.</p>
+                <p><span className="font-medium text-ink-700 dark:text-ink-300">Custom:</span> the score of whichever team just scored, listed first — easier for spectators to follow.</p>
               </div>
             )}
           </section>
 
           <section>
-            <div className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-2">Announcer voice</div>
+            <div className="text-xs font-display font-medium text-ink-500 dark:text-ink-400 mb-2">Announcer voice</div>
             <VoicePicker settings={settings} onChange={onChange} />
           </section>
 
           <section>
-            <div className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-2">Keyboard shortcuts (desktop)</div>
-            <p className="text-xs text-zinc-400 dark:text-zinc-500 mb-2">
+            <div className="text-xs font-display font-medium text-ink-500 dark:text-ink-400 mb-2">Keyboard shortcuts (desktop)</div>
+            <p className="text-xs text-ink-400 dark:text-ink-500 mb-2">
               Score from the keyboard without touching the buttons — handy while a display window (see the Monitor icon on the scoreboard) is on a second screen.
             </p>
             <KeyBindingsEditor settings={settings} onChange={onChange} />
@@ -147,7 +147,7 @@ function KeyBindingsEditor({ settings, onChange }) {
   }, [listeningFor]);
 
   return (
-    <div className="bg-zinc-50 dark:bg-zinc-800/50 rounded-xl divide-y divide-zinc-100 dark:divide-zinc-800">
+    <div className="bg-ink-50 dark:bg-ink-800/50 rounded-xl divide-y divide-ink-100 dark:divide-ink-800">
       {Object.entries(KEY_BINDING_LABELS).map(([action, label]) => (
         <div key={action} className="flex items-center justify-between px-3 py-2.5">
           <span className="text-sm">{label}</span>
@@ -155,8 +155,8 @@ function KeyBindingsEditor({ settings, onChange }) {
             onClick={() => setListeningFor(action)}
             className={`min-w-[64px] px-3 py-1.5 rounded-lg text-sm font-mono font-medium ${
               listeningFor === action
-                ? 'bg-emerald-600 text-white'
-                : 'bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300'
+                ? 'bg-court-600 text-white'
+                : 'bg-white dark:bg-ink-900 text-ink-700 dark:text-ink-300'
             }`}
           >
             {listeningFor === action ? 'Press a key…' : keyDisplayName(bindings[action])}
@@ -179,6 +179,9 @@ function VoicePicker({ settings, onChange }) {
   }, []);
 
   const isTinyTts = settings.voiceURI === TINY_TTS_VOICE_ID;
+  useEffect(() => {
+    if (isTinyTts) warmUpTinyTts();
+  }, [isTinyTts]);
 
   const testVoice = async () => {
     unlockAudioSession();
@@ -207,7 +210,7 @@ function VoicePicker({ settings, onChange }) {
         <select
           value={settings.voiceURI || ''}
           onChange={(e) => { onChange({ voiceURI: e.target.value || null }); setTinyTtsState('idle'); }}
-          className="flex-1 min-w-0 px-3 py-2 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-sm truncate"
+          className="flex-1 min-w-0 px-3 py-2 rounded-lg bg-ink-100 dark:bg-ink-800 text-sm truncate"
           style={{ maxWidth: '100%' }}
         >
           <option value="">Browser default</option>
@@ -221,20 +224,20 @@ function VoicePicker({ settings, onChange }) {
         <button
           onClick={testVoice}
           disabled={tinyTtsState === 'loading'}
-          className="px-3 py-2 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-sm font-medium shrink-0 disabled:opacity-50"
+          className="px-3 py-2 rounded-lg bg-ink-100 dark:bg-ink-800 text-sm font-medium shrink-0 disabled:opacity-50"
         >
           {tinyTtsState === 'loading' ? 'Loading…' : 'Test'}
         </button>
       </div>
       {isTinyTts && (
-        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">
+        <p className="text-xs text-ink-500 dark:text-ink-400 mt-2">
           {tinyTtsState === 'error'
             ? "Couldn't load the on-device voice — falls back to your browser's default when this happens."
             : 'Downloads a small speech model the first time you use it (needs internet then), and keeps working offline after that, even with WiFi off. Built on Piper, a well-established open-source voice engine.'}
         </p>
       )}
       {!window.speechSynthesis && !isTinyTts && (
-        <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-2">Your browser's built-in speech isn't available, but the on-device voice above still works.</p>
+        <p className="text-xs text-ink-400 dark:text-ink-500 mt-2">Your browser's built-in speech isn't available, but the on-device voice above still works.</p>
       )}
     </div>
   );

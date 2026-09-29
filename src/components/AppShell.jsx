@@ -17,10 +17,10 @@
  */
 export function AppShell({ children }) {
   return (
-    <div className="min-h-screen bg-zinc-100 dark:bg-zinc-900 sm:flex sm:items-center sm:justify-center sm:p-6">
+    <div className="min-h-screen bg-ink-100 dark:bg-ink-900 sm:flex sm:items-center sm:justify-center sm:p-6">
       <div
-        className="relative w-full h-screen overflow-hidden bg-zinc-50 dark:bg-zinc-950
-                   text-zinc-900 dark:text-zinc-50
+        className="relative w-full h-screen overflow-hidden bg-ink-50 dark:bg-ink-950
+                   text-ink-950 dark:text-ink-50
                    sm:h-[min(860px,calc(100vh-3rem))] sm:max-w-[430px] sm:rounded-[2rem]
                    sm:shadow-2xl sm:ring-1 sm:ring-black/5 dark:sm:ring-white/10"
       >

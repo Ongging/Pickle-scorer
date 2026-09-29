@@ -1,12 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   ArrowLeft, History as HistoryIcon, Settings, Plus, ChevronRight,
-  AlertTriangle, Volume2, RotateCcw, RefreshCw, Monitor,
+  AlertTriangle, Volume2, Loader2, RotateCcw, RefreshCw, Monitor, X,
 } from 'lucide-react';
 import { sideFor, buildAnnouncement } from '../engine/rulesEngine';
 import { speechFriendly, unlockAudioSession } from '../lib/speech';
-import { speakTinyTts, TINY_TTS_VOICE_ID } from '../lib/tinyTts';
-import { ScoreNumeral, ServeDots } from './ui';
+import { speakTinyTts, warmUpTinyTts, TINY_TTS_VOICE_ID } from '../lib/tinyTts';
+import { subscribeExternalDisplay, pickExternalScreen } from '../lib/externalDisplay';
+import { ScoreNumeral, ServeNumber } from './ui';
 
 const SCORE_SIZE = { sm: 'text-6xl', md: 'text-7xl', lg: 'text-8xl' };
 const LABEL_SIZE = { sm: 'text-xs', md: 'text-sm', lg: 'text-base' };
@@ -32,18 +33,32 @@ export function ScoreboardScreen({
   const [format, setFormat] = useState(settings.announcementFormat);
   useEffect(() => setFormat(settings.announcementFormat), [settings.announcementFormat]);
 
+  // Pay the on-device model's warm-up cost (fetch/cache + spin up the
+  // WASM runtimes) as soon as it's the active voice, rather than at the
+  // moment someone actually wants to hear the score. See tinyTts.js.
+  useEffect(() => {
+    if (settings.voiceURI === TINY_TTS_VOICE_ID) warmUpTinyTts();
+  }, [settings.voiceURI]);
+
+  const [speaking, setSpeaking] = useState(false);
   const speak = async () => {
     unlockAudioSession();
     const text = speechFriendly(buildAnnouncement(gameState, format));
 
     if (settings.voiceURI === TINY_TTS_VOICE_ID) {
+      setSpeaking(true);
       try {
         await speakTinyTts(text);
-        return;
       } catch (err) {
         console.error('On-device voice failed, falling back to browser speech:', err);
-        // fall through to Web Speech below
+        if (window.speechSynthesis) {
+          window.speechSynthesis.cancel();
+          window.speechSynthesis.speak(new SpeechSynthesisUtterance(text));
+        }
+      } finally {
+        setSpeaking(false);
       }
+      return;
     }
 
     if (!window.speechSynthesis) return;
@@ -59,12 +74,40 @@ export function ScoreboardScreen({
   const scoreSize = SCORE_SIZE[settings.textSize];
   const labelSize = LABEL_SIZE[settings.textSize];
 
-  const openDisplayWindow = () => {
+  const openDisplayWindow = (targetScreen) => {
+    if (targetScreen) {
+      const { availLeft, availTop, availWidth, availHeight } = targetScreen;
+      window.open(
+        '/display.html',
+        'pickleball-display',
+        `left=${availLeft},top=${availTop},width=${availWidth},height=${availHeight},menubar=no,toolbar=no,location=no,status=no`,
+      );
+      return;
+    }
     window.open(
       '/display.html',
       'pickleball-display',
       'width=1280,height=800,menubar=no,toolbar=no,location=no,status=no',
     );
+  };
+
+  // External-display auto-detect: offer to open the display window the
+  // moment a second screen shows up, instead of relying on someone to
+  // notice the Monitor button. See lib/externalDisplay.js for exactly
+  // what this can and can't see.
+  const [showExternalPrompt, setShowExternalPrompt] = useState(false);
+  const wasConnected = useRef(false);
+  useEffect(() => {
+    const unsub = subscribeExternalDisplay((connected) => {
+      if (connected && !wasConnected.current) setShowExternalPrompt(true);
+      if (!connected) setShowExternalPrompt(false);
+      wasConnected.current = connected;
+    });
+    return unsub;
+  }, []);
+  const acceptExternalDisplay = async () => {
+    setShowExternalPrompt(false);
+    openDisplayWindow(await pickExternalScreen());
   };
 
   // Desktop keyboard shortcuts, configurable in Settings. This is what
@@ -90,49 +133,65 @@ export function ScoreboardScreen({
   }, [settings.keyBindings, showFaultButtons, gameState.awaitingSideOut, onPoint, onFault, onSideOut, onUndo]);
 
   return (
-    <div className="h-full bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 flex flex-col">
+    <div className="h-full bg-ink-50 dark:bg-ink-950 text-ink-950 dark:text-ink-50 flex flex-col">
       <div className="flex items-center justify-between px-5 pt-6 pb-1">
-        <button onClick={onNewGame} className="p-2 -ml-2 rounded-full bg-zinc-100 dark:bg-zinc-800">
+        <button onClick={onNewGame} className="p-2 -ml-2 rounded-full bg-ink-100 dark:bg-ink-800">
           <ArrowLeft size={18} />
         </button>
-        <div className={`${labelSize} font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wide`}>
-          {config.type === 'singles' ? 'Singles' : 'Doubles'} ·{' '}
-          {config.mode === 'traditional' ? 'Traditional' : config.mode === 'rally' ? 'Rally Scoring' : 'Casual'}
+        <div className={`${labelSize} font-display font-medium text-ink-500 dark:text-ink-400`}>
+          {config.type === 'singles' ? 'Singles' : 'Doubles'},{' '}
+          {config.mode === 'traditional' ? 'traditional' : config.mode === 'rally' ? 'rally scoring' : 'casual'}
         </div>
         <div className="flex gap-1">
-          <button onClick={openDisplayWindow} className="p-2 rounded-full bg-zinc-100 dark:bg-zinc-800" title="Open display window">
+          <button onClick={() => openDisplayWindow()} className="p-2 rounded-full bg-ink-100 dark:bg-ink-800" title="Open display window">
             <Monitor size={18} />
           </button>
-          <button onClick={onOpenHistory} className="p-2 rounded-full bg-zinc-100 dark:bg-zinc-800">
+          <button onClick={onOpenHistory} className="p-2 rounded-full bg-ink-100 dark:bg-ink-800">
             <HistoryIcon size={18} />
           </button>
-          <button onClick={onOpenSettings} className="p-2 rounded-full bg-zinc-100 dark:bg-zinc-800">
+          <button onClick={onOpenSettings} className="p-2 rounded-full bg-ink-100 dark:bg-ink-800">
             <Settings size={18} />
           </button>
         </div>
       </div>
 
-      {/* Scores */}
-      <div className="grid grid-cols-2 gap-3 px-5 pt-4">
-        {['A', 'B'].map((team) => {
-          const data = gameState[team === 'A' ? 'teamA' : 'teamB'];
-          const isServing = gameState.servingTeam === team;
-          return (
-            <div
-              key={team}
-              className={`rounded-2xl py-5 flex flex-col items-center gap-1 border-2 transition-all duration-300 ${
-                isServing
-                  ? 'border-emerald-500/70 bg-emerald-50 dark:bg-emerald-950/30 shadow-[0_0_0_4px_rgba(16,185,129,0.08)]'
-                  : 'border-transparent bg-white dark:bg-zinc-900 shadow-sm'
-              } ${invalidFlash === team ? 'pb-shake' : ''}`}
-            >
-              <div className={`${labelSize} font-medium text-zinc-500 dark:text-zinc-400 truncate max-w-[90%]`}>
-                {data.name}
+      {showExternalPrompt && (
+        <div className="mx-5 mt-2 rounded-lg bg-court-50 dark:bg-court-950/50 px-3 py-2.5 flex items-center gap-2">
+          <Monitor size={15} className="text-court-600 dark:text-court-400 shrink-0" />
+          <p className="flex-1 text-xs text-ink-700 dark:text-ink-200">External display detected — show the scoreboard there?</p>
+          <button onClick={acceptExternalDisplay} className="text-xs font-display font-semibold text-court-600 dark:text-court-400 px-1 shrink-0">
+            Show
+          </button>
+          <button onClick={() => setShowExternalPrompt(false)} className="p-1 text-ink-400 shrink-0">
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
+      {/* Score panel — one unified panel with a center divider standing
+          in for the net, rather than two separate floating cards. */}
+      <div className="mx-5 mt-4 rounded-2xl bg-white dark:bg-ink-900 relative overflow-hidden">
+        <div className="absolute inset-y-4 left-1/2 w-px bg-ink-200 dark:bg-ink-700 -translate-x-1/2" />
+        <div className="grid grid-cols-2">
+          {['A', 'B'].map((team) => {
+            const data = gameState[team === 'A' ? 'teamA' : 'teamB'];
+            const isServing = gameState.servingTeam === team;
+            return (
+              <div
+                key={team}
+                className={`py-5 flex flex-col items-center gap-1 transition-colors duration-300 ${
+                  isServing ? 'bg-court-50 dark:bg-court-950/30' : ''
+                } ${invalidFlash === team ? 'pb-shake' : ''}`}
+              >
+                <div className={`${labelSize} font-display font-medium text-ink-500 dark:text-ink-400 truncate max-w-[90%] flex items-center gap-1.5`}>
+                  {isServing && <span className="w-1.5 h-1.5 rounded-full bg-court-500 shrink-0" />}
+                  {data.name}
+                </div>
+                <ScoreNumeral value={data.score} theme={settings.theme} sizeClass={scoreSize} />
               </div>
-              <ScoreNumeral value={data.score} theme={settings.theme} sizeClass={scoreSize} />
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
       {/* Serve tracker */}
@@ -144,25 +203,25 @@ export function ScoreboardScreen({
               left: (config.mode === 'casual' ? gameState.manualServingTeam : gameState.servingTeam) === 'A' ? '20px' : '50%',
             }}
           >
-            <div className="px-3 py-1.5 rounded-full bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-xs font-medium flex items-center gap-1.5 shadow-sm">
+            <div className="px-3 py-1.5 rounded-full bg-ink-950 dark:bg-ink-100 text-white dark:text-ink-950 text-xs font-display font-medium flex items-center gap-2 shadow-sm">
               {config.mode === 'casual' ? (
                 <>
                   {config.type === 'doubles' && gameState.manualServingTeam === 'A' && (
-                    <ServeDots active={gameState.manualServerNumber} />
+                    <ServeNumber active={gameState.manualServerNumber} className="w-5 h-5 text-[11px]" />
                   )}
-                  <span>Serving · {manualPosition === 'right' ? 'Right' : 'Left'}</span>
+                  <span>Serving, {manualPosition === 'right' ? 'right' : 'left'}</span>
                   {config.type === 'doubles' && gameState.manualServingTeam === 'B' && (
-                    <ServeDots active={gameState.manualServerNumber} />
+                    <ServeNumber active={gameState.manualServerNumber} className="w-5 h-5 text-[11px]" />
                   )}
                 </>
               ) : (
                 <>
                   {isDoublesTraditional && gameState.servingTeam === 'A' && (
-                    <ServeDots active={gameState.serverNumber} />
+                    <ServeNumber active={gameState.serverNumber} className="w-5 h-5 text-[11px]" />
                   )}
-                  <span>Serving · {position === 'right' ? 'Right' : 'Left'}</span>
+                  <span>Serving, {position === 'right' ? 'right' : 'left'}</span>
                   {isDoublesTraditional && gameState.servingTeam === 'B' && (
-                    <ServeDots active={gameState.serverNumber} />
+                    <ServeNumber active={gameState.serverNumber} className="w-5 h-5 text-[11px]" />
                   )}
                 </>
               )}
@@ -171,7 +230,7 @@ export function ScoreboardScreen({
           {config.mode === 'casual' && (
             <button
               onClick={() => dispatch({ type: 'MANUAL_TOGGLE' })}
-              className="absolute right-2 top-0 p-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800"
+              className="absolute right-2 top-0 p-1.5 rounded-full bg-ink-100 dark:bg-ink-800"
               title="Advance manual serve tracker"
             >
               <RefreshCw size={13} />
@@ -194,10 +253,10 @@ export function ScoreboardScreen({
               <button
                 onClick={() => onPoint(team)}
                 disabled={!pointActive}
-                className={`py-3.5 rounded-xl font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-1 ${
+                className={`py-3.5 rounded-xl font-display font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-1 ${
                   pointActive
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-300 dark:text-zinc-700 cursor-not-allowed'
+                    ? 'bg-court-600 text-white'
+                    : 'bg-ink-100 dark:bg-ink-900 text-ink-300 dark:text-ink-700 cursor-not-allowed'
                 }`}
               >
                 <Plus size={16} /> Point
@@ -206,10 +265,10 @@ export function ScoreboardScreen({
                 <button
                   onClick={() => faultActive && onFault()}
                   disabled={!faultActive}
-                  className={`py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                  className={`py-2.5 rounded-xl text-sm font-display font-medium transition-colors ${
                     faultActive
-                      ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300'
-                      : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-300 dark:text-zinc-700 cursor-not-allowed'
+                      ? 'bg-clay-50 dark:bg-clay-600/20 text-clay-600 dark:text-clay-100'
+                      : 'bg-ink-100 dark:bg-ink-900 text-ink-300 dark:text-ink-700 cursor-not-allowed'
                   }`}
                 >
                   Fault
@@ -224,7 +283,7 @@ export function ScoreboardScreen({
         <div className="px-5 mt-3">
           <button
             onClick={onSideOut}
-            className="w-full py-3 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-semibold flex items-center justify-center gap-2"
+            className="w-full py-3 rounded-xl bg-ink-950 dark:bg-white text-white dark:text-ink-950 font-display font-semibold flex items-center justify-center gap-2"
           >
             Side Out <ChevronRight size={16} />
           </button>
@@ -233,7 +292,7 @@ export function ScoreboardScreen({
 
       {invalidFlash && (
         <div className="px-5 mt-3">
-          <div className="flex items-center gap-2 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 rounded-lg px-3 py-2">
+          <div className="flex items-center gap-2 text-xs text-clay-600 dark:text-clay-100 bg-clay-50 dark:bg-clay-600/20 rounded-lg px-3 py-2">
             <AlertTriangle size={14} /> Only the serving team can score in Traditional mode.
           </div>
         </div>
@@ -241,28 +300,28 @@ export function ScoreboardScreen({
 
       {/* Announcement */}
       <div className="px-5 mt-4">
-        <div className="bg-zinc-100 dark:bg-zinc-900 rounded-xl px-4 py-3">
+        <div className="bg-ink-100 dark:bg-ink-900 rounded-xl px-4 py-3">
           <div className="flex items-center justify-between mb-1">
-            <span className={`${labelSize} text-zinc-500 dark:text-zinc-400 font-medium`}>Announce this</span>
+            <span className={`${labelSize} text-ink-500 dark:text-ink-400 font-display font-medium`}>Announce this</span>
             <div className="flex gap-1">
               <button
                 onClick={() => setFormat('traditional')}
-                className={`text-[11px] px-2 py-0.5 rounded-full ${format === 'traditional' ? 'bg-emerald-600 text-white' : 'text-zinc-500 dark:text-zinc-400'}`}
+                className={`text-[11px] px-2 py-0.5 rounded-full ${format === 'traditional' ? 'bg-court-600 text-white' : 'text-ink-500 dark:text-ink-400'}`}
               >
                 Traditional
               </button>
               <button
                 onClick={() => setFormat('custom')}
-                className={`text-[11px] px-2 py-0.5 rounded-full ${format === 'custom' ? 'bg-emerald-600 text-white' : 'text-zinc-500 dark:text-zinc-400'}`}
+                className={`text-[11px] px-2 py-0.5 rounded-full ${format === 'custom' ? 'bg-court-600 text-white' : 'text-ink-500 dark:text-ink-400'}`}
               >
                 Custom
               </button>
             </div>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-xl font-bold tabular-nums">{buildAnnouncement(gameState, format)}</span>
-            <button onClick={speak} className="p-2 rounded-full bg-white dark:bg-zinc-800">
-              <Volume2 size={16} />
+            <span className="text-xl font-display font-bold tabular-nums">{buildAnnouncement(gameState, format)}</span>
+            <button onClick={speak} disabled={speaking} className="p-2 rounded-full bg-white dark:bg-ink-800 disabled:opacity-60">
+              {speaking ? <Loader2 size={16} className="animate-spin" /> : <Volume2 size={16} />}
             </button>
           </div>
         </div>
@@ -275,13 +334,13 @@ export function ScoreboardScreen({
         <button
           onClick={onUndo}
           disabled={gameState.past.length === 0}
-          className="py-3 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-40"
+          className="py-3 rounded-xl bg-ink-100 dark:bg-ink-800 text-sm font-display font-medium flex items-center justify-center gap-2 disabled:opacity-40"
         >
           <RotateCcw size={15} /> Undo
         </button>
         <button
           onClick={onReset}
-          className="py-3 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-sm font-medium flex items-center justify-center gap-2"
+          className="py-3 rounded-xl bg-ink-100 dark:bg-ink-800 text-sm font-display font-medium flex items-center justify-center gap-2"
         >
           <RefreshCw size={15} /> Reset
         </button>
@@ -289,24 +348,24 @@ export function ScoreboardScreen({
 
       {gameState.gameOver && (
         <div className="absolute inset-0 bg-black/50 flex items-end sm:items-center justify-center p-5 z-20">
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 w-full max-w-sm text-center">
-            <div className="text-xs font-medium text-emerald-600 uppercase tracking-wide mb-1">Game over</div>
-            <div className="text-2xl font-bold mb-1">
+          <div className="bg-white dark:bg-ink-900 rounded-2xl p-6 w-full max-w-sm text-center">
+            <div className="text-xs font-display font-medium text-court-600 dark:text-court-400 mb-1">Game over</div>
+            <div className="text-2xl font-display font-bold mb-1">
               {gameState.winner === 'A' ? gameState.teamA.name : gameState.teamB.name} wins
             </div>
-            <div className="text-lg tabular-nums text-zinc-500 dark:text-zinc-400 mb-5">
+            <div className="text-lg tabular-nums text-ink-500 dark:text-ink-400 mb-5">
               {gameState.teamA.score} – {gameState.teamB.score}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={onOpenHistory}
-                className="py-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-sm font-medium"
+                className="py-2.5 rounded-xl bg-ink-100 dark:bg-ink-800 text-sm font-display font-medium"
               >
                 View history
               </button>
               <button
                 onClick={onNewGame}
-                className="py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-medium"
+                className="py-2.5 rounded-xl bg-court-600 text-white text-sm font-display font-medium"
               >
                 New game
               </button>
