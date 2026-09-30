@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import {
-  ArrowLeft, History as HistoryIcon, Settings, Plus, ChevronRight,
+  ArrowLeft, History as HistoryIcon, Settings, Plus,
   AlertTriangle, Volume2, Loader2, RotateCcw, RefreshCw, Monitor, X,
 } from 'lucide-react';
 import { sideFor, buildAnnouncement } from '../engine/rulesEngine';
@@ -14,7 +14,7 @@ const LABEL_SIZE = { sm: 'text-xs', md: 'text-sm', lg: 'text-base' };
 
 export function ScoreboardScreen({
   gameState, dispatch, settings, casualTrackerVisible,
-  invalidFlash, onPoint, onFault, onSideOut, onUndo, onReset, onNewGame,
+  invalidFlash, onPoint, onFault, onUndo, onReset, onNewGame,
   onOpenSettings, onOpenHistory,
 }) {
   const { config } = gameState;
@@ -123,14 +123,13 @@ export function ScoreboardScreen({
       if (e.key === bindings.pointA) onPoint('A');
       else if (e.key === bindings.pointB) onPoint('B');
       else if (e.key === bindings.fault && showFaultButtons) onFault();
-      else if (e.key === bindings.sideOut && gameState.awaitingSideOut) onSideOut();
       else if (e.key === bindings.undo) onUndo();
       else return;
       e.preventDefault();
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [settings.keyBindings, showFaultButtons, gameState.awaitingSideOut, onPoint, onFault, onSideOut, onUndo]);
+  }, [settings.keyBindings, showFaultButtons, onPoint, onFault, onUndo]);
 
   return (
     <div className="h-full bg-ink-50 dark:bg-ink-950 text-ink-950 dark:text-ink-50 flex flex-col">
@@ -240,53 +239,42 @@ export function ScoreboardScreen({
       )}
       {config.mode === 'casual' && !trackerActive && <div className="h-2" />}
 
-      {/* Score / Fault buttons */}
-      <div className="grid grid-cols-2 gap-3 px-5 mt-3">
-        {['A', 'B'].map((team) => {
-          const isServing = gameState.servingTeam === team;
-          // Once the Side Out button is showing, both serves for this team
-          // are exhausted — nothing can score until it's confirmed.
-          const pointActive = !gameState.awaitingSideOut;
-          const faultActive = showFaultButtons && isServing && !gameState.awaitingSideOut;
-          return (
-            <div key={team} className="flex flex-col gap-2">
-              <button
-                onClick={() => onPoint(team)}
-                disabled={!pointActive}
-                className={`py-3.5 rounded-xl font-display font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-1 ${
-                  pointActive
-                    ? 'bg-court-600 text-white'
-                    : 'bg-ink-100 dark:bg-ink-900 text-ink-300 dark:text-ink-700 cursor-not-allowed'
-                }`}
-              >
-                <Plus size={16} /> Point
-              </button>
-              {showFaultButtons && (
-                <button
-                  onClick={() => faultActive && onFault()}
-                  disabled={!faultActive}
-                  className={`py-2.5 rounded-xl text-sm font-display font-medium transition-colors ${
-                    faultActive
-                      ? 'bg-clay-50 dark:bg-clay-600/20 text-clay-600 dark:text-clay-100'
-                      : 'bg-ink-100 dark:bg-ink-900 text-ink-300 dark:text-ink-700 cursor-not-allowed'
-                  }`}
-                >
-                  Fault
-                </button>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      {gameState.awaitingSideOut && (
+      {/* Score / Fault buttons. Traditional mode: only the serving team
+          can ever act, so there's exactly one Point and one Fault
+          button, targeting whoever is currently serving — a fault on
+          the second serve now side-outs immediately (see rulesEngine's
+          FAULT case), no separate confirmation tap. Rally/Casual: both
+          teams can genuinely score independently, so they keep their
+          own buttons. */}
+      {config.mode === 'traditional' ? (
         <div className="px-5 mt-3">
           <button
-            onClick={onSideOut}
-            className="w-full py-3 rounded-xl bg-ink-950 dark:bg-white text-white dark:text-ink-950 font-display font-semibold flex items-center justify-center gap-2"
+            onClick={() => onPoint(gameState.servingTeam)}
+            className="w-full py-3.5 rounded-xl bg-court-600 text-white font-display font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-1.5"
           >
-            Side Out <ChevronRight size={16} />
+            <Plus size={16} />
+            <span className="truncate">
+              Point — {(gameState.servingTeam === 'A' ? gameState.teamA : gameState.teamB).name}
+            </span>
           </button>
+          <button
+            onClick={onFault}
+            className="w-full mt-2 py-2.5 rounded-xl bg-clay-50 dark:bg-clay-600/20 text-clay-600 dark:text-clay-100 text-sm font-display font-medium"
+          >
+            Fault
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3 px-5 mt-3">
+          {['A', 'B'].map((team) => (
+            <button
+              key={team}
+              onClick={() => onPoint(team)}
+              className="py-3.5 rounded-xl bg-court-600 text-white font-display font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-1"
+            >
+              <Plus size={16} /> Point
+            </button>
+          ))}
         </div>
       )}
 

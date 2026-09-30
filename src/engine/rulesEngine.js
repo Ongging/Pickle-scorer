@@ -31,7 +31,6 @@ export function createGame(config) {
     // to right for the new team. Singles instead derives position from
     // the server's own score parity at render time (no state needed).
     position: 'right',
-    awaitingSideOut: false,
     lastScorer: null,
     manualServingTeam: 'A',
     manualServerNumber: 1,
@@ -50,10 +49,6 @@ function snapshot(state) {
 
 export function gameReducer(state, action) {
   if (state.gameOver && action.type !== 'UNDO') return state;
-  // Once both serves are exhausted, scoring/faulting is paused until the
-  // Side Out is explicitly confirmed — otherwise the still-recorded
-  // servingTeam could keep scoring past their exhausted serves.
-  if (state.awaitingSideOut && (action.type === 'POINT' || action.type === 'FAULT')) return state;
 
   switch (action.type) {
     case 'POINT': {
@@ -142,24 +137,19 @@ export function gameReducer(state, action) {
         // Server 1 was NOT just serving from.
         next.serverNumber = 2;
         next.position = state.position === 'right' ? 'left' : 'right';
-      } else {
-        next.awaitingSideOut = true; // position is irrelevant until confirmed
+        return next;
       }
+      // Server 2 just faulted too — both serves for this team are gone,
+      // so the side-out happens immediately, in this same action. (This
+      // used to be a separate awaitingSideOut confirmation step the
+      // scorekeeper had to tap through; that extra tap didn't protect
+      // against anything a straight-through transition doesn't already
+      // handle correctly, so it's gone.)
+      next.servingTeam = otherTeam(state.servingTeam);
+      next.serverNumber = 1;
+      next.position = 'right'; // every side-out restarts from the right
+      next.events = [...next.events, { type: 'side-out' }];
       return next;
-    }
-
-    case 'SIDE_OUT': {
-      if (!state.awaitingSideOut) return state;
-      const prev = snapshot(state);
-      return {
-        ...state,
-        past: [...state.past, prev],
-        servingTeam: otherTeam(state.servingTeam),
-        serverNumber: 1,
-        position: 'right', // every side-out restarts from the right
-        awaitingSideOut: false,
-        events: [...state.events, { type: 'side-out' }],
-      };
     }
 
     case 'MANUAL_TOGGLE': {

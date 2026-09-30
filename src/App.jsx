@@ -22,7 +22,6 @@ const DEFAULT_SETTINGS = {
     pointA: 'ArrowLeft',
     pointB: 'ArrowRight',
     fault: 'ArrowDown',
-    sideOut: 'Enter',
     undo: 'Backspace',
   },
 };
@@ -96,7 +95,7 @@ export default function App() {
   }, [settings.haptics]);
 
   const onPoint = (team) => {
-    if (gameState.gameOver || gameState.awaitingSideOut) return;
+    if (gameState.gameOver) return;
     if (gameState.config.mode === 'traditional' && team !== gameState.servingTeam) {
       vibrate(200);
       setInvalidFlash(team);
@@ -106,7 +105,6 @@ export default function App() {
     dispatch({ type: 'POINT', team });
   };
   const onFault = () => dispatch({ type: 'FAULT' });
-  const onSideOut = () => dispatch({ type: 'SIDE_OUT' });
   const onUndo = () => dispatch({ type: 'UNDO' });
   const onReset = () => setGameState(createGame(gameState.config));
 
@@ -180,7 +178,6 @@ export default function App() {
             invalidFlash={invalidFlash}
             onPoint={onPoint}
             onFault={onFault}
-            onSideOut={onSideOut}
             onUndo={onUndo}
             onReset={onReset}
             onNewGame={onNewGame}

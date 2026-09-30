@@ -84,11 +84,14 @@ export function DisplayView({ gameState, settings, connected = true }) {
         )}
 
         {/* What to call out loud — same panel a scorekeeper sees, so
-            anyone can read the call straight off the display too. */}
+            anyone can read the call straight off the display too. Given
+            its own high-contrast pill (matching the serve capsule above
+            it) rather than bare muted text, which was too faint to
+            actually read from across a court. */}
         {!gameOver && announcement && (
           <div
-            className="font-display font-bold tabular-nums text-ink-400 dark:text-ink-500"
-            style={{ fontSize: '1.3vw', letterSpacing: '0.02em' }}
+            className="px-6 py-2.5 rounded-full bg-white dark:bg-ink-900 text-ink-950 dark:text-white font-display font-bold tabular-nums"
+            style={{ fontSize: '2.4vw', letterSpacing: '0.01em' }}
           >
             {announcement}
           </div>

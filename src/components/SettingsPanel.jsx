@@ -116,7 +116,6 @@ const KEY_BINDING_LABELS = {
   pointA: 'Point — Team A',
   pointB: 'Point — Team B',
   fault: 'Fault',
-  sideOut: 'Side Out',
   undo: 'Undo',
 };
 

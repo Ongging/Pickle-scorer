@@ -26,11 +26,10 @@ describe('Singles Traditional', () => {
     expect(sideFor(s.teamA.score)).toBe('right'); // 2 = even
   });
 
-  it('a fault is an immediate side-out (no second serve, no awaitingSideOut)', () => {
+  it('a fault is an immediate side-out (no second serve)', () => {
     let s = createGame({ type: 'singles', mode: 'traditional', winningScore: 11 });
     s = dispatch(s, { type: 'FAULT' });
     expect(s.servingTeam).toBe('B');
-    expect(s.awaitingSideOut).toBe(false);
     expect(s.serverNumber).toBe(1);
   });
 
@@ -67,42 +66,35 @@ describe('Doubles Traditional (first-server exception + position model)', () => 
     expect(s.position).toBe('right');
   });
 
-  it('an immediate fault goes straight to awaitingSideOut', () => {
+  it('the first-server-exception fault is an immediate, single-tap side-out', () => {
     let s = createGame({ type: 'doubles', mode: 'traditional', winningScore: 11 });
     s = dispatch(s, { type: 'FAULT' });
-    expect(s.awaitingSideOut).toBe(true);
+    expect(s.servingTeam).toBe('B');
+    expect(s.serverNumber).toBe(1);
     expect(s.teamA.score).toBe(0);
-  });
-
-  it('blocks POINT and FAULT while a side-out is pending confirmation', () => {
-    let s = createGame({ type: 'doubles', mode: 'traditional', winningScore: 11 });
-    s = dispatch(s, { type: 'FAULT' });
-    expect(dispatch(s, { type: 'POINT', team: 'A' })).toBe(s);
-    expect(dispatch(s, { type: 'FAULT' })).toBe(s);
   });
 
   it('side-out always resets position to right, regardless of the new server\'s carried-over score', () => {
     let s = createGame({ type: 'doubles', mode: 'traditional', winningScore: 11 });
-    s = dispatch(s, { type: 'FAULT' });
-    s = dispatch(s, { type: 'SIDE_OUT' });
+    s = dispatch(s, { type: 'FAULT' }); // first-server exception: immediate side-out
     expect(s.servingTeam).toBe('B');
     expect(s.position).toBe('right');
 
-    // Drive A's score to an odd number, then have A lose serve, then
-    // regain it later - position must still be 'right' at that point.
-    s = dispatch(s, { type: 'POINT', team: 'B' }); // side out to B was already done; simulate B scoring then losing serve back
-    // Reset scenario cleanly for a focused check:
+    // Drive A's score to an odd number, then have A (as server 2) fault
+    // out — position must still reset to 'right' regardless of A's odd
+    // carried-over score.
     let s2 = createGame({ type: 'doubles', mode: 'traditional', winningScore: 11 });
-    s2 = { ...s2, teamA: { ...s2.teamA, score: 3 }, servingTeam: 'B', serverNumber: 2, awaitingSideOut: true };
-    s2 = dispatch(s2, { type: 'SIDE_OUT' });
+    s2 = { ...s2, teamA: { ...s2.teamA, score: 3 }, servingTeam: 'B', serverNumber: 2 };
+    s2 = dispatch(s2, { type: 'FAULT' });
     expect(s2.servingTeam).toBe('A');
     expect(s2.position).toBe('right'); // right regardless of A's odd score (3)
   });
 
   it('server handoff on fault gives server 2 the opposite side from server 1\'s last position', () => {
     let s = createGame({ type: 'doubles', mode: 'traditional', winningScore: 11 });
-    s = dispatch(s, { type: 'FAULT' });
-    s = dispatch(s, { type: 'SIDE_OUT' }); // B server1, right
+    s = dispatch(s, { type: 'FAULT' }); // first-server exception: immediate side-out to B, server 1, right
+    expect(s.servingTeam).toBe('B');
+    expect(s.serverNumber).toBe(1);
     s = dispatch(s, { type: 'POINT', team: 'B' }); // right -> left
     expect(s.position).toBe('left');
     s = dispatch(s, { type: 'FAULT' }); // handoff to server 2
@@ -216,8 +208,7 @@ describe('Announcements', () => {
 
   it('custom format leads with whoever scored last', () => {
     let s = createGame({ type: 'doubles', mode: 'traditional', winningScore: 11 });
-    s = dispatch(s, { type: 'FAULT' });
-    s = dispatch(s, { type: 'SIDE_OUT' });
+    s = dispatch(s, { type: 'FAULT' }); // first-server exception: immediate side-out
     s = dispatch(s, { type: 'POINT', team: 'B' });
     expect(buildAnnouncement(s, 'custom')).toMatch(/^1-0-1/);
   });
