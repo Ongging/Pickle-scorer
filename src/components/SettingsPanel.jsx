@@ -3,6 +3,7 @@ import { X, Sun, Moon, Monitor } from 'lucide-react';
 import { unlockAudioSession } from '../lib/speech';
 import { speakTinyTts, warmUpTinyTts, TINY_TTS_VOICE_ID } from '../lib/tinyTts';
 import { SegButton, ToggleRow } from './ui';
+import { THEME_OPTIONS } from '../lib/themes';
 
 export function SettingsPanel({ settings, onChange, onClose, casualTrackerVisible, setCasualTrackerVisible }) {
   const [showExplainer, setShowExplainer] = useState(false);
@@ -19,13 +20,9 @@ export function SettingsPanel({ settings, onChange, onClose, casualTrackerVisibl
         <div className="px-5 py-4 space-y-6">
           <section>
             <div className="text-xs font-display font-medium text-ink-500 dark:text-ink-400 mb-2">Theme</div>
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                { id: 'minimalist', label: 'Minimalist' },
-                { id: 'digital', label: 'Digital clock' },
-                { id: 'flip', label: 'Flip card' },
-              ].map((t) => (
-                <SegButton key={t.id} active={settings.theme === t.id} onClick={() => onChange({ theme: t.id })}>
+            <div className="grid grid-cols-2 gap-2">
+              {THEME_OPTIONS.map((t) => (
+                <SegButton key={t.value} active={settings.theme === t.value} onClick={() => onChange({ theme: t.value })}>
                   {t.label}
                 </SegButton>
               ))}

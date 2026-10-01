@@ -1,5 +1,6 @@
 import { ScoreNumeral, ServeNumber } from './ui';
 import { sideFor, buildAnnouncement } from '../engine/rulesEngine';
+import { hasScenePanel, themePanelClasses, themeNameClasses, themeDividerClasses, themeServingClasses } from '../lib/themes';
 
 /**
  * Pure presentation — no buttons, no state mutation. Used two ways:
@@ -26,6 +27,7 @@ export function DisplayView({ gameState, settings, connected = true }) {
       ? window.matchMedia('(prefers-color-scheme: dark)').matches
       : settings.colorMode === 'dark';
   const theme = settings?.theme || 'minimalist';
+  const hasScene = hasScenePanel(theme);
   const isDoublesTraditional = config?.type === 'doubles' && config?.mode === 'traditional';
   const servingScore = (servingTeam === 'A' ? teamA : teamB).score;
   const position = config?.type === 'singles' ? sideFor(servingScore) : gameState.position;
@@ -39,8 +41,8 @@ export function DisplayView({ gameState, settings, connected = true }) {
             Reconnecting…
           </div>
         )}
-        <div className="w-full max-w-[1400px] rounded-[1.5vw] bg-white dark:bg-ink-900 relative overflow-hidden">
-          <div className="absolute inset-y-[3vh] left-1/2 w-px bg-ink-200 dark:bg-ink-700 -translate-x-1/2" />
+        <div className={`w-full max-w-[1400px] rounded-[1.5vw] relative overflow-hidden ${hasScene ? themePanelClasses(theme) : 'bg-white dark:bg-ink-900'}`}>
+          <div className={`absolute inset-y-[3vh] left-1/2 w-px -translate-x-1/2 ${hasScene ? themeDividerClasses(theme) : 'bg-ink-200 dark:bg-ink-700'}`} />
           <div className="grid grid-cols-2">
             {['A', 'B'].map((team) => {
               const data = team === 'A' ? teamA : teamB;
@@ -49,14 +51,21 @@ export function DisplayView({ gameState, settings, connected = true }) {
                 <div
                   key={team}
                   className={`py-[4vh] flex flex-col items-center gap-[1vh] transition-colors ${
-                    isServing ? 'bg-court-50 dark:bg-court-950/30' : ''
+                    isServing ? (hasScene ? themeServingClasses(theme) : 'bg-court-50 dark:bg-court-950/30') : ''
                   }`}
                 >
                   <div
-                    className="font-display font-semibold text-ink-500 dark:text-ink-400 truncate max-w-[90%] flex items-center gap-[0.6vw]"
+                    className={`font-display font-semibold truncate max-w-[90%] flex items-center gap-[0.6vw] ${
+                      hasScene ? themeNameClasses(theme) : 'text-ink-500 dark:text-ink-400'
+                    }`}
                     style={{ fontSize: '2.2vw' }}
                   >
-                    {isServing && <span className="inline-block rounded-full bg-court-500 shrink-0" style={{ width: '0.8vw', height: '0.8vw' }} />}
+                    {isServing && (
+                      <span
+                        className={`inline-block rounded-full shrink-0 ${hasScene ? 'bg-current' : 'bg-court-500'}`}
+                        style={{ width: '0.8vw', height: '0.8vw' }}
+                      />
+                    )}
                     {data.name}
                   </div>
                   <div style={{ fontSize: 'min(20vw, 26vh)', lineHeight: 1 }}>

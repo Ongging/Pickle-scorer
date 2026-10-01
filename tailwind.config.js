@@ -9,6 +9,9 @@ export default {
         display: ['"Space Grotesk"', 'ui-sans-serif', 'sans-serif'],
         led: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
         flip: ['Oswald', 'ui-sans-serif', 'sans-serif'],
+        chalk: ['Caveat', 'cursive'],
+        neon: ['Orbitron', 'ui-sans-serif', 'sans-serif'],
+        sunset: ['Fredoka', 'ui-sans-serif', 'sans-serif'],
       },
       colors: {
         // Teal-tinted neutral scale (replaces Tailwind's default zinc) —

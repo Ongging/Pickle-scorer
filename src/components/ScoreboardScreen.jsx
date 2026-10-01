@@ -7,6 +7,7 @@ import { sideFor, buildAnnouncement } from '../engine/rulesEngine';
 import { speechFriendly, unlockAudioSession } from '../lib/speech';
 import { speakTinyTts, warmUpTinyTts, TINY_TTS_VOICE_ID } from '../lib/tinyTts';
 import { subscribeExternalDisplay, pickExternalScreen } from '../lib/externalDisplay';
+import { hasScenePanel, themePanelClasses, themeNameClasses, themeDividerClasses, themeServingClasses } from '../lib/themes';
 import { ScoreNumeral, ServeNumber } from './ui';
 
 const SCORE_SIZE = { sm: 'text-6xl', md: 'text-7xl', lg: 'text-8xl' };
@@ -73,6 +74,7 @@ export function ScoreboardScreen({
 
   const scoreSize = SCORE_SIZE[settings.textSize];
   const labelSize = LABEL_SIZE[settings.textSize];
+  const hasScene = hasScenePanel(settings.theme);
 
   // Kept so the game-over prompt below can offer to close the window it
   // opened — window.open()'s return value isn't stored anywhere else.
@@ -192,9 +194,12 @@ export function ScoreboardScreen({
       )}
 
       {/* Score panel — one unified panel with a center divider standing
-          in for the net, rather than two separate floating cards. */}
-      <div className="mx-5 mt-4 rounded-2xl bg-white dark:bg-ink-900 relative overflow-hidden">
-        <div className="absolute inset-y-4 left-1/2 w-px bg-ink-200 dark:bg-ink-700 -translate-x-1/2" />
+          in for the net, rather than two separate floating cards.
+          Stadium/Chalkboard/Neon Night/Sunset Court replace this panel's
+          background with their own fixed scene instead (see
+          lib/themes.js) — that's what hasScene below branches on. */}
+      <div className={`mx-5 mt-4 rounded-2xl relative overflow-hidden ${hasScene ? themePanelClasses(settings.theme) : 'bg-white dark:bg-ink-900'}`}>
+        <div className={`absolute inset-y-4 left-1/2 w-px -translate-x-1/2 ${hasScene ? themeDividerClasses(settings.theme) : 'bg-ink-200 dark:bg-ink-700'}`} />
         <div className="grid grid-cols-2">
           {['A', 'B'].map((team) => {
             const data = gameState[team === 'A' ? 'teamA' : 'teamB'];
@@ -203,11 +208,15 @@ export function ScoreboardScreen({
               <div
                 key={team}
                 className={`py-5 flex flex-col items-center gap-1 transition-colors duration-300 ${
-                  isServing ? 'bg-court-50 dark:bg-court-950/30' : ''
+                  isServing ? (hasScene ? themeServingClasses(settings.theme) : 'bg-court-50 dark:bg-court-950/30') : ''
                 } ${invalidFlash === team ? 'pb-shake' : ''}`}
               >
-                <div className={`${labelSize} font-display font-medium text-ink-500 dark:text-ink-400 truncate max-w-[90%] flex items-center gap-1.5`}>
-                  {isServing && <span className="w-1.5 h-1.5 rounded-full bg-court-500 shrink-0" />}
+                <div
+                  className={`${labelSize} font-display font-medium truncate max-w-[90%] flex items-center gap-1.5 ${
+                    hasScene ? themeNameClasses(settings.theme) : 'text-ink-500 dark:text-ink-400'
+                  }`}
+                >
+                  {isServing && <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${hasScene ? 'bg-current' : 'bg-court-500'}`} />}
                   {data.name}
                 </div>
                 <ScoreNumeral value={data.score} theme={settings.theme} sizeClass={scoreSize} />
