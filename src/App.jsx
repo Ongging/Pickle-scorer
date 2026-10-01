@@ -3,7 +3,7 @@ import { createGame, gameReducer } from './engine/rulesEngine';
 import { storage } from './lib/storage';
 import { useAuth } from './lib/auth';
 import { useEntitlements } from './lib/entitlements';
-import { openDisplayChannel, broadcastGameState } from './lib/liveDisplay';
+import { openDisplayChannel, broadcastGameState, HEARTBEAT_MS } from './lib/liveDisplay';
 import { SetupScreen } from './components/SetupScreen';
 import { ScoreboardScreen } from './components/ScoreboardScreen';
 import { SettingsPanel } from './components/SettingsPanel';
@@ -59,9 +59,35 @@ export default function App() {
   // not — postMessage into a BroadcastChannel with no listeners is a
   // no-op. See src/lib/liveDisplay.js and src/components/DisplayView.jsx.
   const displayChannelRef = useRef(null);
+  const latestRef = useRef({ gameState, settings });
+  latestRef.current = { gameState, settings };
+
   useEffect(() => {
-    displayChannelRef.current = openDisplayChannel();
-    return () => displayChannelRef.current?.close();
+    const channel = openDisplayChannel();
+    displayChannelRef.current = channel;
+    if (!channel) return undefined;
+
+    // A display window asking "what's the current state?" right after
+    // it opens — answer immediately instead of making it wait for the
+    // next point to be scored.
+    const onMessage = (event) => {
+      if (event.data?.type !== 'hello') return;
+      broadcastGameState(channel, latestRef.current.gameState, latestRef.current.settings);
+    };
+    channel.addEventListener('message', onMessage);
+
+    // Also re-broadcast on a fixed heartbeat regardless of whether
+    // anything changed — a normal multi-second pause between rallies
+    // shouldn't read as "disconnected" on the display end.
+    const heartbeat = setInterval(() => {
+      broadcastGameState(channel, latestRef.current.gameState, latestRef.current.settings);
+    }, HEARTBEAT_MS);
+
+    return () => {
+      channel.removeEventListener('message', onMessage);
+      clearInterval(heartbeat);
+      channel.close();
+    };
   }, []);
   useEffect(() => {
     broadcastGameState(displayChannelRef.current, gameState, settings);
@@ -158,7 +184,14 @@ export default function App() {
 
   return (
     <div className={isDark ? 'dark' : ''}>
-      <AppShell>
+      <AppShell
+        screen={screen}
+        gameState={gameState}
+        showSettings={showSettings}
+        onNewGame={onNewGame}
+        onOpenHistory={() => { setHistoryReturnScreen(screen === 'history' ? historyReturnScreen : screen); setScreen('history'); }}
+        onOpenSettings={() => setShowSettings(true)}
+      >
         {screen === 'setup' && (
           <SetupScreen
             setupConfig={setupConfig}

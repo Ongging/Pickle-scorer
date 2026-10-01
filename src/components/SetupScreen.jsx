@@ -11,7 +11,7 @@ export function SetupScreen({ setupConfig, setSetupConfig, onStart, onOpenSettin
           <h1 className="text-xl font-display font-bold">Pickleball Scorer</h1>
           <p className="text-xs text-ink-500 dark:text-ink-400 mt-0.5">Set up a new game</p>
         </div>
-        <div className="flex gap-1">
+        <div className="flex gap-1 lg:hidden">
           <button onClick={onOpenHistory} className="p-2 rounded-full bg-ink-100 dark:bg-ink-800">
             <HistoryIcon size={18} />
           </button>

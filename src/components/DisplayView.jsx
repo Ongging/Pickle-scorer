@@ -14,7 +14,7 @@ export function DisplayView({ gameState, settings, connected = true }) {
   if (!gameState) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-ink-950 text-ink-500 font-display text-xl">
-        Waiting for the scoreboard…
+        Connecting to the scoreboard…
       </div>
     );
   }
@@ -98,7 +98,10 @@ export function DisplayView({ gameState, settings, connected = true }) {
         )}
 
         {gameOver && (
-          <div className="font-display font-bold text-court-600 dark:text-court-400" style={{ fontSize: '3vw' }}>
+          <div
+            className="px-10 py-4 rounded-full bg-court-600 text-white font-display font-bold"
+            style={{ fontSize: '3vw' }}
+          >
             {(winner === 'A' ? teamA.name : teamB.name)} wins!
           </div>
         )}

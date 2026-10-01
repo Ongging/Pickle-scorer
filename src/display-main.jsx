@@ -2,7 +2,7 @@ import { StrictMode, useState, useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
 import { DisplayView } from './components/DisplayView';
-import { openDisplayChannel } from './lib/liveDisplay';
+import { openDisplayChannel, requestCurrentState } from './lib/liveDisplay';
 
 function DisplayApp() {
   const [payload, setPayload] = useState(null);
@@ -21,9 +21,16 @@ function DisplayApp() {
     };
     channel.addEventListener('message', onMessage);
 
-    // The controlling window broadcasts on every state change, which is
-    // frequent during a live game — but if it's closed or the tab is
-    // backgrounded for a while, say so instead of silently going stale.
+    // Ask immediately for whatever the current state already is — don't
+    // wait around for the next point to be scored. The controlling
+    // window (App.jsx) answers 'hello' messages right away.
+    requestCurrentState(channel);
+
+    // The controlling window broadcasts on every state change AND on a
+    // fixed heartbeat regardless of change (see liveDisplay.js) — so a
+    // normal pause between rallies doesn't look like a dropped
+    // connection. Only flag it after missing several heartbeats' worth
+    // of silence, which means the tab/window really is gone.
     const staleCheck = setInterval(() => {
       if (Date.now() - lastMessageRef.current > 8000) setConnected(false);
     }, 2000);

@@ -74,21 +74,45 @@ export function ScoreboardScreen({
   const scoreSize = SCORE_SIZE[settings.textSize];
   const labelSize = LABEL_SIZE[settings.textSize];
 
+  // Kept so the game-over prompt below can offer to close the window it
+  // opened — window.open()'s return value isn't stored anywhere else.
+  const displayWindowRef = useRef(null);
   const openDisplayWindow = (targetScreen) => {
     if (targetScreen) {
       const { availLeft, availTop, availWidth, availHeight } = targetScreen;
-      window.open(
+      displayWindowRef.current = window.open(
         '/display.html',
         'pickleball-display',
         `left=${availLeft},top=${availTop},width=${availWidth},height=${availHeight},menubar=no,toolbar=no,location=no,status=no`,
       );
       return;
     }
-    window.open(
+    displayWindowRef.current = window.open(
       '/display.html',
       'pickleball-display',
       'width=1280,height=800,menubar=no,toolbar=no,location=no,status=no',
     );
+  };
+
+  // Offer to close the display window once the game it was showing has
+  // ended — only when one is actually still open (not closed by hand
+  // already), and only once per game-over (wasGameOver guards against
+  // re-showing this on every re-render while gameOver stays true).
+  const [showCloseDisplayPrompt, setShowCloseDisplayPrompt] = useState(false);
+  const wasGameOver = useRef(false);
+  useEffect(() => {
+    if (gameState.gameOver && !wasGameOver.current) {
+      if (displayWindowRef.current && !displayWindowRef.current.closed) {
+        setShowCloseDisplayPrompt(true);
+      }
+    }
+    if (!gameState.gameOver) setShowCloseDisplayPrompt(false);
+    wasGameOver.current = gameState.gameOver;
+  }, [gameState.gameOver]);
+  const closeDisplayWindow = () => {
+    displayWindowRef.current?.close();
+    displayWindowRef.current = null;
+    setShowCloseDisplayPrompt(false);
   };
 
   // External-display auto-detect: offer to open the display window the
@@ -134,7 +158,7 @@ export function ScoreboardScreen({
   return (
     <div className="h-full bg-ink-50 dark:bg-ink-950 text-ink-950 dark:text-ink-50 flex flex-col">
       <div className="flex items-center justify-between px-5 pt-6 pb-1">
-        <button onClick={onNewGame} className="p-2 -ml-2 rounded-full bg-ink-100 dark:bg-ink-800">
+        <button onClick={onNewGame} className="p-2 -ml-2 rounded-full bg-ink-100 dark:bg-ink-800 lg:hidden">
           <ArrowLeft size={18} />
         </button>
         <div className={`${labelSize} font-display font-medium text-ink-500 dark:text-ink-400`}>
@@ -145,10 +169,10 @@ export function ScoreboardScreen({
           <button onClick={() => openDisplayWindow()} className="p-2 rounded-full bg-ink-100 dark:bg-ink-800" title="Open display window">
             <Monitor size={18} />
           </button>
-          <button onClick={onOpenHistory} className="p-2 rounded-full bg-ink-100 dark:bg-ink-800">
+          <button onClick={onOpenHistory} className="p-2 rounded-full bg-ink-100 dark:bg-ink-800 lg:hidden">
             <HistoryIcon size={18} />
           </button>
-          <button onClick={onOpenSettings} className="p-2 rounded-full bg-ink-100 dark:bg-ink-800">
+          <button onClick={onOpenSettings} className="p-2 rounded-full bg-ink-100 dark:bg-ink-800 lg:hidden">
             <Settings size={18} />
           </button>
         </div>
@@ -344,6 +368,14 @@ export function ScoreboardScreen({
             <div className="text-lg tabular-nums text-ink-500 dark:text-ink-400 mb-5">
               {gameState.teamA.score} – {gameState.teamB.score}
             </div>
+            {showCloseDisplayPrompt && (
+              <button
+                onClick={closeDisplayWindow}
+                className="w-full mb-3 py-2.5 rounded-xl border border-ink-200 dark:border-ink-700 text-sm font-display font-medium flex items-center justify-center gap-2 text-ink-600 dark:text-ink-300"
+              >
+                <Monitor size={15} /> Close the display window
+              </button>
+            )}
             <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={onOpenHistory}
