@@ -14,6 +14,7 @@ const DEFAULT_SETTINGS = {
   theme: 'minimalist',
   colorMode: 'system',
   textSize: 'md',
+  displayAnnounceSize: 'md', // the "score to say" text size on the external display window
   haptics: true,
   announcementFormat: 'traditional',
   showCasualTracker: true,
@@ -187,6 +188,7 @@ export default function App() {
       <AppShell
         screen={screen}
         gameState={gameState}
+        theme={settings.theme}
         showSettings={showSettings}
         onNewGame={onNewGame}
         onOpenHistory={() => { setHistoryReturnScreen(screen === 'history' ? historyReturnScreen : screen); setScreen('history'); }}
@@ -196,6 +198,7 @@ export default function App() {
           <SetupScreen
             setupConfig={setupConfig}
             setSetupConfig={setSetupConfig}
+            theme={settings.theme}
             onStart={startGame}
             onOpenSettings={() => setShowSettings(true)}
             onOpenHistory={() => { setHistoryReturnScreen('setup'); setScreen('history'); }}
@@ -221,6 +224,7 @@ export default function App() {
         {screen === 'history' && (
           <HistoryScreen
             history={history}
+            theme={settings.theme}
             onBack={() => setScreen(historyReturnScreen)}
             onToggleFavorite={toggleFavorite}
             onDelete={deleteGame}

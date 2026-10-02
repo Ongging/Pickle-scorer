@@ -1,21 +1,27 @@
 import { Settings, History as HistoryIcon } from 'lucide-react';
 import { SegButton, ToggleRow } from './ui';
+import { hasScenePanel, themeVars } from '../lib/themes';
 
-export function SetupScreen({ setupConfig, setSetupConfig, onStart, onOpenSettings, onOpenHistory }) {
+export function SetupScreen({ setupConfig, setSetupConfig, theme, onStart, onOpenSettings, onOpenHistory }) {
   const update = (patch) => setSetupConfig((prev) => ({ ...prev, ...patch }));
+  const hasScene = hasScenePanel(theme);
+  const themed = (sceneClasses, defaultClasses) => (hasScene ? sceneClasses : defaultClasses);
 
   return (
-    <div className="h-full bg-ink-50 dark:bg-ink-950 text-ink-950 dark:text-ink-50 flex flex-col">
+    <div
+      style={themeVars(theme)}
+      className={`h-full flex flex-col ${themed('bg-[var(--t-surface)] text-[var(--t-text)]', 'bg-ink-50 dark:bg-ink-950 text-ink-950 dark:text-ink-50')}`}
+    >
       <div className="flex items-center justify-between px-5 pt-6 pb-2">
         <div>
           <h1 className="text-xl font-display font-bold">Pickleball Scorer</h1>
-          <p className="text-xs text-ink-500 dark:text-ink-400 mt-0.5">Set up a new game</p>
+          <p className={`text-xs mt-0.5 ${themed('text-[var(--t-text-muted)]', 'text-ink-500 dark:text-ink-400')}`}>Set up a new game</p>
         </div>
         <div className="flex gap-1 lg:hidden">
-          <button onClick={onOpenHistory} className="p-2 rounded-full bg-ink-100 dark:bg-ink-800">
+          <button onClick={onOpenHistory} className={`p-2 rounded-full ${themed('bg-[var(--t-surface-alt)]', 'bg-ink-100 dark:bg-ink-800')}`}>
             <HistoryIcon size={18} />
           </button>
-          <button onClick={onOpenSettings} className="p-2 rounded-full bg-ink-100 dark:bg-ink-800">
+          <button onClick={onOpenSettings} className={`p-2 rounded-full ${themed('bg-[var(--t-surface-alt)]', 'bg-ink-100 dark:bg-ink-800')}`}>
             <Settings size={18} />
           </button>
         </div>
@@ -111,8 +117,8 @@ export function SetupScreen({ setupConfig, setSetupConfig, onStart, onOpenSettin
                   onClick={() => update({ firstServer: team })}
                   className={`rounded-lg p-3 border-2 cursor-pointer transition-colors ${
                     selected
-                      ? 'border-court-500 bg-court-50 dark:bg-court-950/30'
-                      : 'border-transparent bg-ink-100 dark:bg-ink-800'
+                      ? themed('border-[var(--t-accent)] bg-[var(--t-surface-alt)]', 'border-court-500 bg-court-50 dark:bg-court-950/30')
+                      : themed('border-transparent bg-[var(--t-surface-alt)]', 'border-transparent bg-ink-100 dark:bg-ink-800')
                   }`}
                 >
                   <input
@@ -121,7 +127,7 @@ export function SetupScreen({ setupConfig, setSetupConfig, onStart, onOpenSettin
                     placeholder={team === 'A' ? 'Team A' : 'Team B'}
                     className="w-full bg-transparent text-sm font-medium outline-none min-w-0"
                   />
-                  <div className={`text-[10px] font-medium mt-1 ${selected ? 'text-court-600 dark:text-court-400' : 'text-transparent'}`}>
+                  <div className={`text-[10px] font-medium mt-1 ${selected ? themed('text-[var(--t-accent)]', 'text-court-600 dark:text-court-400') : 'text-transparent'}`}>
                     Serves first
                   </div>
                 </div>
@@ -134,7 +140,7 @@ export function SetupScreen({ setupConfig, setSetupConfig, onStart, onOpenSettin
       <div className="px-5 pb-6 pt-2">
         <button
           onClick={onStart}
-          className="w-full py-3.5 rounded-xl bg-court-600 text-white font-display font-semibold text-base active:scale-[0.98] transition-transform"
+          className={`w-full py-3.5 rounded-xl font-display font-semibold text-base active:scale-[0.98] transition-transform ${themed('bg-[var(--t-accent)] text-[var(--t-accent-text)]', 'bg-court-600 text-white')}`}
         >
           Start game
         </button>

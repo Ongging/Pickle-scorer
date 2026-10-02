@@ -1,6 +1,8 @@
 import { ScoreNumeral, ServeNumber } from './ui';
 import { sideFor, buildAnnouncement } from '../engine/rulesEngine';
-import { hasScenePanel, themePanelClasses, themeNameClasses, themeDividerClasses, themeServingClasses } from '../lib/themes';
+import { hasScenePanel, themePanelClasses, themeNameClasses, themeDividerClasses, themeServingClasses, themeVars } from '../lib/themes';
+
+const ANNOUNCE_SIZE_VW = { sm: '1.8vw', md: '2.4vw', lg: '3.2vw' };
 
 /**
  * Pure presentation — no buttons, no state mutation. Used two ways:
@@ -12,9 +14,18 @@ import { hasScenePanel, themePanelClasses, themeNameClasses, themeDividerClasses
  *    "TV shows only the score, my phone/laptop keeps the controls" case.
  */
 export function DisplayView({ gameState, settings, connected = true }) {
+  const theme = settings?.theme || 'minimalist';
+  const hasScene = hasScenePanel(theme);
+  const themed = (sceneClasses, defaultClasses) => (hasScene ? sceneClasses : defaultClasses);
+
   if (!gameState) {
     return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-ink-950 text-ink-500 font-display text-xl">
+      <div
+        style={themeVars(theme)}
+        className={`min-h-screen w-full flex items-center justify-center font-display text-xl ${
+          themed('bg-[var(--t-bg)] text-[var(--t-text-muted)]', 'bg-ink-950 text-ink-500')
+        }`}
+      >
         Connecting to the scoreboard…
       </div>
     );
@@ -26,16 +37,19 @@ export function DisplayView({ gameState, settings, connected = true }) {
     : settings.colorMode === 'system'
       ? window.matchMedia('(prefers-color-scheme: dark)').matches
       : settings.colorMode === 'dark';
-  const theme = settings?.theme || 'minimalist';
-  const hasScene = hasScenePanel(theme);
   const isDoublesTraditional = config?.type === 'doubles' && config?.mode === 'traditional';
   const servingScore = (servingTeam === 'A' ? teamA : teamB).score;
   const position = config?.type === 'singles' ? sideFor(servingScore) : gameState.position;
   const announcement = config ? buildAnnouncement(gameState, settings?.announcementFormat || 'traditional') : null;
+  const announceSize = ANNOUNCE_SIZE_VW[settings?.displayAnnounceSize] || ANNOUNCE_SIZE_VW.md;
 
   return (
-    <div className={isDark ? 'dark' : ''}>
-      <div className="min-h-screen w-full bg-ink-100 dark:bg-ink-950 flex flex-col items-center justify-center gap-[2.5vh] px-[4vw] relative">
+    <div className={isDark ? 'dark' : ''} style={themeVars(theme)}>
+      <div
+        className={`min-h-screen w-full flex flex-col items-center justify-center gap-[2.5vh] px-[4vw] relative ${
+          themed('bg-[var(--t-bg)]', 'bg-ink-100 dark:bg-ink-950')
+        }`}
+      >
         {!connected && (
           <div className="absolute top-6 right-6 text-xs font-display font-medium text-clay-600 bg-clay-50 px-3 py-1.5 rounded-full">
             Reconnecting…
@@ -79,7 +93,9 @@ export function DisplayView({ gameState, settings, connected = true }) {
 
         {!gameOver && config && (
           <div
-            className="flex items-center gap-[0.8vw] px-6 py-3 rounded-full bg-ink-950 dark:bg-ink-100 text-white dark:text-ink-950 font-display font-medium"
+            className={`flex items-center gap-[0.8vw] px-6 py-3 rounded-full font-display font-medium ${
+              themed('bg-[var(--t-accent)] text-[var(--t-accent-text)]', 'bg-ink-950 dark:bg-ink-100 text-white dark:text-ink-950')
+            }`}
             style={{ fontSize: '1.6vw' }}
           >
             {isDoublesTraditional && servingTeam === 'A' && (
@@ -99,8 +115,10 @@ export function DisplayView({ gameState, settings, connected = true }) {
             actually read from across a court. */}
         {!gameOver && announcement && (
           <div
-            className="px-6 py-2.5 rounded-full bg-white dark:bg-ink-900 text-ink-950 dark:text-white font-display font-bold tabular-nums"
-            style={{ fontSize: '2.4vw', letterSpacing: '0.01em' }}
+            className={`px-6 py-2.5 rounded-full font-display font-bold tabular-nums ${
+              themed('bg-[var(--t-surface)] text-[var(--t-text)]', 'bg-white dark:bg-ink-900 text-ink-950 dark:text-white')
+            }`}
+            style={{ fontSize: announceSize, letterSpacing: '0.01em' }}
           >
             {announcement}
           </div>
@@ -108,7 +126,9 @@ export function DisplayView({ gameState, settings, connected = true }) {
 
         {gameOver && (
           <div
-            className="px-10 py-4 rounded-full bg-court-600 text-white font-display font-bold"
+            className={`px-10 py-4 rounded-full font-display font-bold ${
+              themed('bg-[var(--t-accent)] text-[var(--t-accent-text)]', 'bg-court-600 text-white')
+            }`}
             style={{ fontSize: '3vw' }}
           >
             {(winner === 'A' ? teamA.name : teamB.name)} wins!

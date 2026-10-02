@@ -75,6 +75,11 @@ export function ScoreboardScreen({
   const scoreSize = SCORE_SIZE[settings.textSize];
   const labelSize = LABEL_SIZE[settings.textSize];
   const hasScene = hasScenePanel(settings.theme);
+  // Fault/warning stay their normal clay-red regardless of theme —
+  // that's a semantic "something needs attention" color, not a
+  // decorative accent, so it's kept constant on purpose rather than
+  // reskinned per theme like everything else below.
+  const themed = (sceneClasses, defaultClasses) => (hasScene ? sceneClasses : defaultClasses);
 
   // Kept so the game-over prompt below can offer to close the window it
   // opened — window.open()'s return value isn't stored anywhere else.
@@ -158,36 +163,36 @@ export function ScoreboardScreen({
   }, [settings.keyBindings, showFaultButtons, onPoint, onFault, onUndo]);
 
   return (
-    <div className="h-full bg-ink-50 dark:bg-ink-950 text-ink-950 dark:text-ink-50 flex flex-col">
+    <div className={`h-full flex flex-col ${themed('bg-[var(--t-surface)] text-[var(--t-text)]', 'bg-ink-50 dark:bg-ink-950 text-ink-950 dark:text-ink-50')}`}>
       <div className="flex items-center justify-between px-5 pt-6 pb-1">
-        <button onClick={onNewGame} className="p-2 -ml-2 rounded-full bg-ink-100 dark:bg-ink-800 lg:hidden">
+        <button onClick={onNewGame} className={`p-2 -ml-2 rounded-full lg:hidden ${themed('bg-[var(--t-surface-alt)]', 'bg-ink-100 dark:bg-ink-800')}`}>
           <ArrowLeft size={18} />
         </button>
-        <div className={`${labelSize} font-display font-medium text-ink-500 dark:text-ink-400`}>
+        <div className={`${labelSize} font-display font-medium ${themed('text-[var(--t-text-muted)]', 'text-ink-500 dark:text-ink-400')}`}>
           {config.type === 'singles' ? 'Singles' : 'Doubles'},{' '}
           {config.mode === 'traditional' ? 'traditional' : config.mode === 'rally' ? 'rally scoring' : 'casual'}
         </div>
         <div className="flex gap-1">
-          <button onClick={() => openDisplayWindow()} className="p-2 rounded-full bg-ink-100 dark:bg-ink-800" title="Open display window">
+          <button onClick={() => openDisplayWindow()} className={`p-2 rounded-full ${themed('bg-[var(--t-surface-alt)]', 'bg-ink-100 dark:bg-ink-800')}`} title="Open display window">
             <Monitor size={18} />
           </button>
-          <button onClick={onOpenHistory} className="p-2 rounded-full bg-ink-100 dark:bg-ink-800 lg:hidden">
+          <button onClick={onOpenHistory} className={`p-2 rounded-full lg:hidden ${themed('bg-[var(--t-surface-alt)]', 'bg-ink-100 dark:bg-ink-800')}`}>
             <HistoryIcon size={18} />
           </button>
-          <button onClick={onOpenSettings} className="p-2 rounded-full bg-ink-100 dark:bg-ink-800 lg:hidden">
+          <button onClick={onOpenSettings} className={`p-2 rounded-full lg:hidden ${themed('bg-[var(--t-surface-alt)]', 'bg-ink-100 dark:bg-ink-800')}`}>
             <Settings size={18} />
           </button>
         </div>
       </div>
 
       {showExternalPrompt && (
-        <div className="mx-5 mt-2 rounded-lg bg-court-50 dark:bg-court-950/50 px-3 py-2.5 flex items-center gap-2">
-          <Monitor size={15} className="text-court-600 dark:text-court-400 shrink-0" />
-          <p className="flex-1 text-xs text-ink-700 dark:text-ink-200">External display detected — show the scoreboard there?</p>
-          <button onClick={acceptExternalDisplay} className="text-xs font-display font-semibold text-court-600 dark:text-court-400 px-1 shrink-0">
+        <div className={`mx-5 mt-2 rounded-lg px-3 py-2.5 flex items-center gap-2 ${themed('bg-[var(--t-surface-alt)]', 'bg-court-50 dark:bg-court-950/50')}`}>
+          <Monitor size={15} className={`shrink-0 ${themed('text-[var(--t-accent)]', 'text-court-600 dark:text-court-400')}`} />
+          <p className={`flex-1 text-xs ${themed('text-[var(--t-text)]', 'text-ink-700 dark:text-ink-200')}`}>External display detected — show the scoreboard there?</p>
+          <button onClick={acceptExternalDisplay} className={`text-xs font-display font-semibold px-1 shrink-0 ${themed('text-[var(--t-accent)]', 'text-court-600 dark:text-court-400')}`}>
             Show
           </button>
-          <button onClick={() => setShowExternalPrompt(false)} className="p-1 text-ink-400 shrink-0">
+          <button onClick={() => setShowExternalPrompt(false)} className={`p-1 shrink-0 ${themed('text-[var(--t-text-muted)]', 'text-ink-400')}`}>
             <X size={14} />
           </button>
         </div>
@@ -235,7 +240,7 @@ export function ScoreboardScreen({
               left: (config.mode === 'casual' ? gameState.manualServingTeam : gameState.servingTeam) === 'A' ? '20px' : '50%',
             }}
           >
-            <div className="px-3 py-1.5 rounded-full bg-ink-950 dark:bg-ink-100 text-white dark:text-ink-950 text-xs font-display font-medium flex items-center gap-2 shadow-sm">
+            <div className={`px-3 py-1.5 rounded-full text-xs font-display font-medium flex items-center gap-2 shadow-sm ${themed('bg-[var(--t-accent)] text-[var(--t-accent-text)]', 'bg-ink-950 dark:bg-ink-100 text-white dark:text-ink-950')}`}>
               {config.mode === 'casual' ? (
                 <>
                   {config.type === 'doubles' && gameState.manualServingTeam === 'A' && (
@@ -262,7 +267,7 @@ export function ScoreboardScreen({
           {config.mode === 'casual' && (
             <button
               onClick={() => dispatch({ type: 'MANUAL_TOGGLE' })}
-              className="absolute right-2 top-0 p-1.5 rounded-full bg-ink-100 dark:bg-ink-800"
+              className={`absolute right-2 top-0 p-1.5 rounded-full ${themed('bg-[var(--t-surface-alt)]', 'bg-ink-100 dark:bg-ink-800')}`}
               title="Advance manual serve tracker"
             >
               <RefreshCw size={13} />
@@ -283,7 +288,7 @@ export function ScoreboardScreen({
         <div className="px-5 mt-3">
           <button
             onClick={() => onPoint(gameState.servingTeam)}
-            className="w-full py-3.5 rounded-xl bg-court-600 text-white font-display font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-1.5"
+            className={`w-full py-3.5 rounded-xl font-display font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-1.5 ${themed('bg-[var(--t-accent)] text-[var(--t-accent-text)]', 'bg-court-600 text-white')}`}
           >
             <Plus size={16} />
             <span className="truncate">
@@ -303,7 +308,7 @@ export function ScoreboardScreen({
             <button
               key={team}
               onClick={() => onPoint(team)}
-              className="py-3.5 rounded-xl bg-court-600 text-white font-display font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-1"
+              className={`py-3.5 rounded-xl font-display font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-1 ${themed('bg-[var(--t-accent)] text-[var(--t-accent-text)]', 'bg-court-600 text-white')}`}
             >
               <Plus size={16} /> Point
             </button>
@@ -321,19 +326,23 @@ export function ScoreboardScreen({
 
       {/* Announcement */}
       <div className="px-5 mt-4">
-        <div className="bg-ink-100 dark:bg-ink-900 rounded-xl px-4 py-3">
+        <div className={`rounded-xl px-4 py-3 ${themed('bg-[var(--t-surface-alt)]', 'bg-ink-100 dark:bg-ink-900')}`}>
           <div className="flex items-center justify-between mb-1">
-            <span className={`${labelSize} text-ink-500 dark:text-ink-400 font-display font-medium`}>Announce this</span>
+            <span className={`${labelSize} font-display font-medium ${themed('text-[var(--t-text-muted)]', 'text-ink-500 dark:text-ink-400')}`}>Announce this</span>
             <div className="flex gap-1">
               <button
                 onClick={() => setFormat('traditional')}
-                className={`text-[11px] px-2 py-0.5 rounded-full ${format === 'traditional' ? 'bg-court-600 text-white' : 'text-ink-500 dark:text-ink-400'}`}
+                className={`text-[11px] px-2 py-0.5 rounded-full ${
+                  format === 'traditional' ? themed('bg-[var(--t-accent)] text-[var(--t-accent-text)]', 'bg-court-600 text-white') : themed('text-[var(--t-text-muted)]', 'text-ink-500 dark:text-ink-400')
+                }`}
               >
                 Traditional
               </button>
               <button
                 onClick={() => setFormat('custom')}
-                className={`text-[11px] px-2 py-0.5 rounded-full ${format === 'custom' ? 'bg-court-600 text-white' : 'text-ink-500 dark:text-ink-400'}`}
+                className={`text-[11px] px-2 py-0.5 rounded-full ${
+                  format === 'custom' ? themed('bg-[var(--t-accent)] text-[var(--t-accent-text)]', 'bg-court-600 text-white') : themed('text-[var(--t-text-muted)]', 'text-ink-500 dark:text-ink-400')
+                }`}
               >
                 Custom
               </button>
@@ -341,7 +350,7 @@ export function ScoreboardScreen({
           </div>
           <div className="flex items-center justify-between">
             <span className="text-xl font-display font-bold tabular-nums">{buildAnnouncement(gameState, format)}</span>
-            <button onClick={speak} disabled={speaking} className="p-2 rounded-full bg-white dark:bg-ink-800 disabled:opacity-60">
+            <button onClick={speak} disabled={speaking} className={`p-2 rounded-full disabled:opacity-60 ${themed('bg-[var(--t-surface)]', 'bg-white dark:bg-ink-800')}`}>
               {speaking ? <Loader2 size={16} className="animate-spin" /> : <Volume2 size={16} />}
             </button>
           </div>
@@ -355,13 +364,13 @@ export function ScoreboardScreen({
         <button
           onClick={onUndo}
           disabled={gameState.past.length === 0}
-          className="py-3 rounded-xl bg-ink-100 dark:bg-ink-800 text-sm font-display font-medium flex items-center justify-center gap-2 disabled:opacity-40"
+          className={`py-3 rounded-xl text-sm font-display font-medium flex items-center justify-center gap-2 disabled:opacity-40 ${themed('bg-[var(--t-surface-alt)]', 'bg-ink-100 dark:bg-ink-800')}`}
         >
           <RotateCcw size={15} /> Undo
         </button>
         <button
           onClick={onReset}
-          className="py-3 rounded-xl bg-ink-100 dark:bg-ink-800 text-sm font-display font-medium flex items-center justify-center gap-2"
+          className={`py-3 rounded-xl text-sm font-display font-medium flex items-center justify-center gap-2 ${themed('bg-[var(--t-surface-alt)]', 'bg-ink-100 dark:bg-ink-800')}`}
         >
           <RefreshCw size={15} /> Reset
         </button>
@@ -369,18 +378,20 @@ export function ScoreboardScreen({
 
       {gameState.gameOver && (
         <div className="absolute inset-0 bg-black/50 flex items-end sm:items-center justify-center p-5 z-20">
-          <div className="bg-white dark:bg-ink-900 rounded-2xl p-6 w-full max-w-sm text-center">
-            <div className="text-xs font-display font-medium text-court-600 dark:text-court-400 mb-1">Game over</div>
+          <div className={`rounded-2xl p-6 w-full max-w-sm text-center ${themed('bg-[var(--t-surface)] text-[var(--t-text)]', 'bg-white dark:bg-ink-900')}`}>
+            <div className={`text-xs font-display font-medium mb-1 ${themed('text-[var(--t-accent)]', 'text-court-600 dark:text-court-400')}`}>Game over</div>
             <div className="text-2xl font-display font-bold mb-1">
               {gameState.winner === 'A' ? gameState.teamA.name : gameState.teamB.name} wins
             </div>
-            <div className="text-lg tabular-nums text-ink-500 dark:text-ink-400 mb-5">
+            <div className={`text-lg tabular-nums mb-5 ${themed('text-[var(--t-text-muted)]', 'text-ink-500 dark:text-ink-400')}`}>
               {gameState.teamA.score} – {gameState.teamB.score}
             </div>
             {showCloseDisplayPrompt && (
               <button
                 onClick={closeDisplayWindow}
-                className="w-full mb-3 py-2.5 rounded-xl border border-ink-200 dark:border-ink-700 text-sm font-display font-medium flex items-center justify-center gap-2 text-ink-600 dark:text-ink-300"
+                className={`w-full mb-3 py-2.5 rounded-xl border text-sm font-display font-medium flex items-center justify-center gap-2 ${
+                  themed('border-[var(--t-border)] text-[var(--t-text-muted)]', 'border-ink-200 dark:border-ink-700 text-ink-600 dark:text-ink-300')
+                }`}
               >
                 <Monitor size={15} /> Close the display window
               </button>
@@ -388,13 +399,13 @@ export function ScoreboardScreen({
             <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={onOpenHistory}
-                className="py-2.5 rounded-xl bg-ink-100 dark:bg-ink-800 text-sm font-display font-medium"
+                className={`py-2.5 rounded-xl text-sm font-display font-medium ${themed('bg-[var(--t-surface-alt)]', 'bg-ink-100 dark:bg-ink-800')}`}
               >
                 View history
               </button>
               <button
                 onClick={onNewGame}
-                className="py-2.5 rounded-xl bg-court-600 text-white text-sm font-display font-medium"
+                className={`py-2.5 rounded-xl text-sm font-display font-medium ${themed('bg-[var(--t-accent)] text-[var(--t-accent-text)]', 'bg-court-600 text-white')}`}
               >
                 New game
               </button>

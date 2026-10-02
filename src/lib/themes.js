@@ -22,6 +22,25 @@
  * light-mode-aware palette would roughly double this file for a case
  * none of the four conceptually call for.
  */
+// Role colors for the rest of the UI (everything outside the score
+// panel itself — the app background, the sidebar, buttons, other
+// screens). Five roles is intentionally the whole set:
+//   bg         — page/app background, behind every panel
+//   surface    — a card/panel/modal's own background
+//   surfaceAlt — a secondary surface inside a surface (sidebar nav
+//                hover, the announce panel inside the scoreboard)
+//   text       — primary text on a surface
+//   textMuted  — secondary/label text on a surface
+//   accent     — primary button background (Point, New game, etc.)
+//   accentText — text color ON an accent-colored button
+//   border     — dividers, outlines
+// Sunset Court is the one light-background theme of the four (the
+// other three are all inherently dark concepts — a jumbotron, a night
+// sky, a blackboard); its text/accent roles are flipped accordingly.
+// Consumed via themeVars() below as CSS custom properties, so any
+// component can reference e.g. `bg-[var(--t-surface)]` without needing
+// the theme threaded through as a prop everywhere — set once at the
+// app root (AppShell) and it cascades.
 export const THEMES = {
   minimalist: { label: 'Minimalist' },
   digital: { label: 'Digital clock' },
@@ -32,6 +51,11 @@ export const THEMES = {
     nameClasses: 'text-amber-200/80',
     dividerClasses: 'bg-amber-600/40',
     servingClasses: 'bg-amber-500/10',
+    vars: {
+      bg: '#000000', surface: '#0a0a0a', surfaceAlt: '#1a1a1a',
+      text: '#fcd34d', textMuted: 'rgba(252,211,77,0.55)',
+      accent: '#d97706', accentText: '#000000', border: 'rgba(217,119,6,0.3)',
+    },
   },
   chalkboard: {
     label: 'Chalkboard',
@@ -39,6 +63,11 @@ export const THEMES = {
     nameClasses: 'text-white/70',
     dividerClasses: 'bg-white/15',
     servingClasses: 'bg-white/5',
+    vars: {
+      bg: '#16281f', surface: '#1e3a2f', surfaceAlt: '#24463a',
+      text: '#f5f5f0', textMuted: 'rgba(245,245,240,0.55)',
+      accent: '#f5f5f0', accentText: '#16281f', border: 'rgba(245,245,240,0.15)',
+    },
   },
   neon: {
     label: 'Neon Night',
@@ -46,6 +75,11 @@ export const THEMES = {
     nameClasses: 'text-cyan-100/70',
     dividerClasses: 'bg-cyan-400/20',
     servingClasses: 'bg-cyan-400/10',
+    vars: {
+      bg: '#0a0118', surface: '#140a28', surfaceAlt: '#1d1038',
+      text: '#e5e7ff', textMuted: 'rgba(229,231,255,0.5)',
+      accent: '#22d3ee', accentText: '#0a0118', border: 'rgba(34,211,238,0.25)',
+    },
   },
   sunset: {
     label: 'Sunset Court',
@@ -53,14 +87,19 @@ export const THEMES = {
     nameClasses: 'text-white/90',
     dividerClasses: 'bg-white/30',
     servingClasses: 'bg-white/15',
+    vars: {
+      bg: '#ffedd5', surface: '#fff7ed', surfaceAlt: '#ffe4c4',
+      text: '#7c2d12', textMuted: 'rgba(124,45,18,0.6)',
+      accent: '#ea580c', accentText: '#ffffff', border: 'rgba(124,45,18,0.15)',
+    },
   },
 };
 
 export const THEME_OPTIONS = Object.entries(THEMES).map(([value, t]) => ({ value, label: t.label }));
 
-// Whether this theme replaces the panel's background (the four above)
-// vs. just changing the numeral font on the app's normal background
-// (the original three).
+// Whether this theme replaces the default ink/court palette (the four
+// above) vs. just changing the numeral font on the app's normal
+// background (the original three).
 export function hasScenePanel(theme) {
   return Boolean(THEMES[theme]?.panelClasses);
 }
@@ -76,4 +115,25 @@ export function themeDividerClasses(theme) {
 }
 export function themeServingClasses(theme) {
   return THEMES[theme]?.servingClasses || '';
+}
+
+// CSS custom properties for the role colors above, meant to be spread
+// onto a root element's style prop — e.g. <div style={themeVars(theme)}>
+// — so every descendant can use bg-[var(--t-surface)] etc. regardless
+// of which component it's in. Returns {} for the original three themes
+// (which don't touch anything outside the score panel), so spreading
+// this is always safe.
+export function themeVars(theme) {
+  const vars = THEMES[theme]?.vars;
+  if (!vars) return {};
+  return {
+    '--t-bg': vars.bg,
+    '--t-surface': vars.surface,
+    '--t-surface-alt': vars.surfaceAlt,
+    '--t-text': vars.text,
+    '--t-text-muted': vars.textMuted,
+    '--t-accent': vars.accent,
+    '--t-accent-text': vars.accentText,
+    '--t-border': vars.border,
+  };
 }

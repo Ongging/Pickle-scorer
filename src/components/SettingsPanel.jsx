@@ -3,16 +3,27 @@ import { X, Sun, Moon, Monitor } from 'lucide-react';
 import { unlockAudioSession } from '../lib/speech';
 import { speakTinyTts, warmUpTinyTts, TINY_TTS_VOICE_ID } from '../lib/tinyTts';
 import { SegButton, ToggleRow } from './ui';
-import { THEME_OPTIONS } from '../lib/themes';
+import { THEME_OPTIONS, hasScenePanel, themeVars } from '../lib/themes';
 
 export function SettingsPanel({ settings, onChange, onClose, casualTrackerVisible, setCasualTrackerVisible }) {
   const [showExplainer, setShowExplainer] = useState(false);
+  const hasScene = hasScenePanel(settings.theme);
+  const themed = (sceneClasses, defaultClasses) => (hasScene ? sceneClasses : defaultClasses);
   return (
     <div className="absolute inset-0 bg-black/40 z-30 flex items-end sm:items-center justify-center">
-      <div className="bg-white dark:bg-ink-900 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[85%] overflow-y-auto overflow-x-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-ink-100 dark:border-ink-800 sticky top-0 z-10 bg-white dark:bg-ink-900">
+      <div
+        style={themeVars(settings.theme)}
+        className={`rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[85%] overflow-y-auto overflow-x-hidden ${
+          themed('bg-[var(--t-surface)] text-[var(--t-text)]', 'bg-white dark:bg-ink-900')
+        }`}
+      >
+        <div
+          className={`flex items-center justify-between px-5 py-4 border-b sticky top-0 z-10 ${
+            themed('border-[var(--t-border)] bg-[var(--t-surface)]', 'border-ink-100 dark:border-ink-800 bg-white dark:bg-ink-900')
+          }`}
+        >
           <h2 className="font-display font-semibold">Settings</h2>
-          <button onClick={onClose} className="p-1.5 rounded-full bg-ink-100 dark:bg-ink-800">
+          <button onClick={onClose} className={`p-1.5 rounded-full ${themed('bg-[var(--t-surface-alt)]', 'bg-ink-100 dark:bg-ink-800')}`}>
             <X size={16} />
           </button>
         </div>
@@ -50,6 +61,18 @@ export function SettingsPanel({ settings, onChange, onClose, casualTrackerVisibl
               <SegButton active={settings.textSize === 'sm'} onClick={() => onChange({ textSize: 'sm' })}>Small</SegButton>
               <SegButton active={settings.textSize === 'md'} onClick={() => onChange({ textSize: 'md' })}>Medium</SegButton>
               <SegButton active={settings.textSize === 'lg'} onClick={() => onChange({ textSize: 'lg' })}>Large</SegButton>
+            </div>
+          </section>
+
+          <section>
+            <div className="text-xs font-display font-medium text-ink-500 dark:text-ink-400 mb-2">Score-to-say size (display)</div>
+            <p className="text-xs text-ink-400 dark:text-ink-500 mb-2">
+              How big the "7-5-2"-style call shows on the external display window — separate from the score numerals themselves.
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              <SegButton active={settings.displayAnnounceSize === 'sm'} onClick={() => onChange({ displayAnnounceSize: 'sm' })}>Small</SegButton>
+              <SegButton active={settings.displayAnnounceSize === 'md'} onClick={() => onChange({ displayAnnounceSize: 'md' })}>Medium</SegButton>
+              <SegButton active={settings.displayAnnounceSize === 'lg'} onClick={() => onChange({ displayAnnounceSize: 'lg' })}>Large</SegButton>
             </div>
           </section>
 
