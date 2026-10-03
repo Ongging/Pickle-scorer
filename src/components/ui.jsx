@@ -1,4 +1,6 @@
-export function ScoreNumeral({ value, theme, sizeClass }) {
+import { hasScenePanel, themeNumeralStyle } from '../lib/themes';
+
+export function ScoreNumeral({ value, theme, sizeClass, isDark = true }) {
   if (theme === 'digital') {
     return (
       <span
@@ -31,43 +33,20 @@ export function ScoreNumeral({ value, theme, sizeClass }) {
       </span>
     );
   }
-  if (theme === 'stadium') {
+  // Stadium/Chalkboard/Neon Night/Sunset Court — each has its own dark
+  // AND light numeral treatment in the registry (lib/themes.js), picked
+  // by isDark, so this one branch covers all four instead of four
+  // near-identical hardcoded blocks.
+  if (hasScenePanel(theme)) {
+    const { color, glow } = themeNumeralStyle(theme, isDark);
+    const fontClass = theme === 'stadium' ? 'font-led tracking-wider'
+      : theme === 'chalkboard' ? 'font-chalk'
+      : theme === 'neon' ? 'font-neon'
+      : 'font-sunset';
+    const padded = theme === 'stadium' || theme === 'neon';
     return (
-      <span
-        className={`font-led font-bold tabular-nums tracking-wider ${sizeClass}`}
-        style={{ color: '#fbbf24', textShadow: '0 0 6px rgba(251,191,36,0.85), 0 0 24px rgba(251,191,36,0.45)' }}
-      >
-        {String(value).padStart(2, '0')}
-      </span>
-    );
-  }
-  if (theme === 'chalkboard') {
-    return (
-      <span
-        className={`font-chalk font-bold tabular-nums ${sizeClass}`}
-        style={{ color: '#f5f5f0', textShadow: '1px 1px 2px rgba(0,0,0,0.3)' }}
-      >
-        {value}
-      </span>
-    );
-  }
-  if (theme === 'neon') {
-    return (
-      <span
-        className={`font-neon font-bold tabular-nums ${sizeClass}`}
-        style={{ color: '#22d3ee', textShadow: '0 0 6px rgba(34,211,238,0.9), 0 0 20px rgba(34,211,238,0.6), 0 0 40px rgba(34,211,238,0.3)' }}
-      >
-        {String(value).padStart(2, '0')}
-      </span>
-    );
-  }
-  if (theme === 'sunset') {
-    return (
-      <span
-        className={`font-sunset font-bold tabular-nums ${sizeClass}`}
-        style={{ color: '#ffffff', textShadow: '0 2px 6px rgba(0,0,0,0.2)' }}
-      >
-        {value}
+      <span className={`${fontClass} font-bold tabular-nums ${sizeClass}`} style={{ color, textShadow: glow }}>
+        {padded ? String(value).padStart(2, '0') : value}
       </span>
     );
   }

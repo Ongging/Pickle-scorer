@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { ArrowLeft, Star, Trash2 } from 'lucide-react';
 import { hasScenePanel, themeVars } from '../lib/themes';
 
-export function HistoryScreen({ history, theme, onBack, onToggleFavorite, onDelete, onDeleteAll }) {
+export function HistoryScreen({ history, theme, isDark, onBack, onToggleFavorite, onDelete, onDeleteAll }) {
   const [confirmingAll, setConfirmingAll] = useState(false);
   const hasScene = hasScenePanel(theme);
   const themed = (sceneClasses, defaultClasses) => (hasScene ? sceneClasses : defaultClasses);
@@ -15,7 +15,7 @@ export function HistoryScreen({ history, theme, onBack, onToggleFavorite, onDele
 
   return (
     <div
-      style={themeVars(theme)}
+      style={themeVars(theme, isDark)}
       className={`h-full flex flex-col ${themed('bg-[var(--t-surface)] text-[var(--t-text)]', 'bg-ink-50 dark:bg-ink-950 text-ink-950 dark:text-ink-50')}`}
     >
       <div className="flex items-center justify-between px-5 pt-6 pb-3">

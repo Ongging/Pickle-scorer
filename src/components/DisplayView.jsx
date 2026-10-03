@@ -17,11 +17,16 @@ export function DisplayView({ gameState, settings, connected = true }) {
   const theme = settings?.theme || 'minimalist';
   const hasScene = hasScenePanel(theme);
   const themed = (sceneClasses, defaultClasses) => (hasScene ? sceneClasses : defaultClasses);
+  const isDark = settings?.colorMode === 'dark' || settings?.colorMode === undefined
+    ? true
+    : settings.colorMode === 'system'
+      ? window.matchMedia('(prefers-color-scheme: dark)').matches
+      : settings.colorMode === 'dark';
 
   if (!gameState) {
     return (
       <div
-        style={themeVars(theme)}
+        style={themeVars(theme, isDark)}
         className={`min-h-screen w-full flex items-center justify-center font-display text-xl ${
           themed('bg-[var(--t-bg)] text-[var(--t-text-muted)]', 'bg-ink-950 text-ink-500')
         }`}
@@ -32,11 +37,6 @@ export function DisplayView({ gameState, settings, connected = true }) {
   }
 
   const { teamA, teamB, servingTeam, serverNumber, gameOver, winner, config } = gameState;
-  const isDark = settings?.colorMode === 'dark' || settings?.colorMode === undefined
-    ? true
-    : settings.colorMode === 'system'
-      ? window.matchMedia('(prefers-color-scheme: dark)').matches
-      : settings.colorMode === 'dark';
   const isDoublesTraditional = config?.type === 'doubles' && config?.mode === 'traditional';
   const servingScore = (servingTeam === 'A' ? teamA : teamB).score;
   const position = config?.type === 'singles' ? sideFor(servingScore) : gameState.position;
@@ -44,7 +44,7 @@ export function DisplayView({ gameState, settings, connected = true }) {
   const announceSize = ANNOUNCE_SIZE_VW[settings?.displayAnnounceSize] || ANNOUNCE_SIZE_VW.md;
 
   return (
-    <div className={isDark ? 'dark' : ''} style={themeVars(theme)}>
+    <div className={isDark ? 'dark' : ''} style={themeVars(theme, isDark)}>
       <div
         className={`min-h-screen w-full flex flex-col items-center justify-center gap-[2.5vh] px-[4vw] relative ${
           themed('bg-[var(--t-bg)]', 'bg-ink-100 dark:bg-ink-950')
@@ -55,8 +55,8 @@ export function DisplayView({ gameState, settings, connected = true }) {
             Reconnecting…
           </div>
         )}
-        <div className={`w-full max-w-[1400px] rounded-[1.5vw] relative overflow-hidden ${hasScene ? themePanelClasses(theme) : 'bg-white dark:bg-ink-900'}`}>
-          <div className={`absolute inset-y-[3vh] left-1/2 w-px -translate-x-1/2 ${hasScene ? themeDividerClasses(theme) : 'bg-ink-200 dark:bg-ink-700'}`} />
+        <div className={`w-full max-w-[1400px] rounded-[1.5vw] relative overflow-hidden ${hasScene ? themePanelClasses(theme, isDark) : 'bg-white dark:bg-ink-900'}`}>
+          <div className={`absolute inset-y-[3vh] left-1/2 w-px -translate-x-1/2 ${hasScene ? themeDividerClasses(theme, isDark) : 'bg-ink-200 dark:bg-ink-700'}`} />
           <div className="grid grid-cols-2">
             {['A', 'B'].map((team) => {
               const data = team === 'A' ? teamA : teamB;
@@ -65,12 +65,12 @@ export function DisplayView({ gameState, settings, connected = true }) {
                 <div
                   key={team}
                   className={`py-[4vh] flex flex-col items-center gap-[1vh] transition-colors ${
-                    isServing ? (hasScene ? themeServingClasses(theme) : 'bg-court-50 dark:bg-court-950/30') : ''
+                    isServing ? (hasScene ? themeServingClasses(theme, isDark) : 'bg-court-50 dark:bg-court-950/30') : ''
                   }`}
                 >
                   <div
                     className={`font-display font-semibold truncate max-w-[90%] flex items-center gap-[0.6vw] ${
-                      hasScene ? themeNameClasses(theme) : 'text-ink-500 dark:text-ink-400'
+                      hasScene ? themeNameClasses(theme, isDark) : 'text-ink-500 dark:text-ink-400'
                     }`}
                     style={{ fontSize: '2.2vw' }}
                   >
@@ -83,7 +83,7 @@ export function DisplayView({ gameState, settings, connected = true }) {
                     {data.name}
                   </div>
                   <div style={{ fontSize: 'min(20vw, 26vh)', lineHeight: 1 }}>
-                    <ScoreNumeral value={data.score} theme={theme} sizeClass="" />
+                    <ScoreNumeral value={data.score} theme={theme} sizeClass="" isDark={isDark} />
                   </div>
                 </div>
               );

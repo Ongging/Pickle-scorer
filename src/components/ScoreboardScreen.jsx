@@ -14,7 +14,7 @@ const SCORE_SIZE = { sm: 'text-6xl', md: 'text-7xl', lg: 'text-8xl' };
 const LABEL_SIZE = { sm: 'text-xs', md: 'text-sm', lg: 'text-base' };
 
 export function ScoreboardScreen({
-  gameState, dispatch, settings, casualTrackerVisible,
+  gameState, dispatch, settings, isDark, casualTrackerVisible,
   invalidFlash, onPoint, onFault, onUndo, onReset, onNewGame,
   onOpenSettings, onOpenHistory,
 }) {
@@ -203,8 +203,8 @@ export function ScoreboardScreen({
           Stadium/Chalkboard/Neon Night/Sunset Court replace this panel's
           background with their own fixed scene instead (see
           lib/themes.js) — that's what hasScene below branches on. */}
-      <div className={`mx-5 mt-4 rounded-2xl relative overflow-hidden ${hasScene ? themePanelClasses(settings.theme) : 'bg-white dark:bg-ink-900'}`}>
-        <div className={`absolute inset-y-4 left-1/2 w-px -translate-x-1/2 ${hasScene ? themeDividerClasses(settings.theme) : 'bg-ink-200 dark:bg-ink-700'}`} />
+      <div className={`mx-5 mt-4 rounded-2xl relative overflow-hidden ${hasScene ? themePanelClasses(settings.theme, isDark) : 'bg-white dark:bg-ink-900'}`}>
+        <div className={`absolute inset-y-4 left-1/2 w-px -translate-x-1/2 ${hasScene ? themeDividerClasses(settings.theme, isDark) : 'bg-ink-200 dark:bg-ink-700'}`} />
         <div className="grid grid-cols-2">
           {['A', 'B'].map((team) => {
             const data = gameState[team === 'A' ? 'teamA' : 'teamB'];
@@ -213,18 +213,18 @@ export function ScoreboardScreen({
               <div
                 key={team}
                 className={`py-5 flex flex-col items-center gap-1 transition-colors duration-300 ${
-                  isServing ? (hasScene ? themeServingClasses(settings.theme) : 'bg-court-50 dark:bg-court-950/30') : ''
+                  isServing ? (hasScene ? themeServingClasses(settings.theme, isDark) : 'bg-court-50 dark:bg-court-950/30') : ''
                 } ${invalidFlash === team ? 'pb-shake' : ''}`}
               >
                 <div
                   className={`${labelSize} font-display font-medium truncate max-w-[90%] flex items-center gap-1.5 ${
-                    hasScene ? themeNameClasses(settings.theme) : 'text-ink-500 dark:text-ink-400'
+                    hasScene ? themeNameClasses(settings.theme, isDark) : 'text-ink-500 dark:text-ink-400'
                   }`}
                 >
                   {isServing && <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${hasScene ? 'bg-current' : 'bg-court-500'}`} />}
                   {data.name}
                 </div>
-                <ScoreNumeral value={data.score} theme={settings.theme} sizeClass={scoreSize} />
+                <ScoreNumeral value={data.score} theme={settings.theme} sizeClass={scoreSize} isDark={isDark} />
               </div>
             );
           })}

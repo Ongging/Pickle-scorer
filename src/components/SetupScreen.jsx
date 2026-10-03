@@ -2,14 +2,14 @@ import { Settings, History as HistoryIcon } from 'lucide-react';
 import { SegButton, ToggleRow } from './ui';
 import { hasScenePanel, themeVars } from '../lib/themes';
 
-export function SetupScreen({ setupConfig, setSetupConfig, theme, onStart, onOpenSettings, onOpenHistory }) {
+export function SetupScreen({ setupConfig, setSetupConfig, theme, isDark, onStart, onOpenSettings, onOpenHistory }) {
   const update = (patch) => setSetupConfig((prev) => ({ ...prev, ...patch }));
   const hasScene = hasScenePanel(theme);
   const themed = (sceneClasses, defaultClasses) => (hasScene ? sceneClasses : defaultClasses);
 
   return (
     <div
-      style={themeVars(theme)}
+      style={themeVars(theme, isDark)}
       className={`h-full flex flex-col ${themed('bg-[var(--t-surface)] text-[var(--t-text)]', 'bg-ink-50 dark:bg-ink-950 text-ink-950 dark:text-ink-50')}`}
     >
       <div className="flex items-center justify-between px-5 pt-6 pb-2">

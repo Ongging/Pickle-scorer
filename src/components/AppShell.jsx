@@ -38,12 +38,12 @@ import { hasScenePanel, themeVars } from '../lib/themes';
  * before.
  */
 export function AppShell({
-  children, screen, gameState, theme, showSettings, onNewGame, onOpenHistory, onOpenSettings,
+  children, screen, gameState, theme, isDark, showSettings, onNewGame, onOpenHistory, onOpenSettings,
 }) {
   const hasScene = hasScenePanel(theme);
   return (
     <div
-      style={themeVars(theme)}
+      style={themeVars(theme, isDark)}
       className={`min-h-screen sm:flex sm:items-center sm:justify-center sm:p-6 lg:items-stretch lg:justify-start lg:p-0 ${
         hasScene ? 'bg-[var(--t-bg)]' : 'bg-ink-100 dark:bg-ink-900'
       }`}

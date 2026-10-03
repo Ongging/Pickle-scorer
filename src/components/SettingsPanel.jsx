@@ -5,14 +5,14 @@ import { speakTinyTts, warmUpTinyTts, TINY_TTS_VOICE_ID } from '../lib/tinyTts';
 import { SegButton, ToggleRow } from './ui';
 import { THEME_OPTIONS, hasScenePanel, themeVars } from '../lib/themes';
 
-export function SettingsPanel({ settings, onChange, onClose, casualTrackerVisible, setCasualTrackerVisible }) {
+export function SettingsPanel({ settings, isDark, onChange, onClose, casualTrackerVisible, setCasualTrackerVisible }) {
   const [showExplainer, setShowExplainer] = useState(false);
   const hasScene = hasScenePanel(settings.theme);
   const themed = (sceneClasses, defaultClasses) => (hasScene ? sceneClasses : defaultClasses);
   return (
     <div className="absolute inset-0 bg-black/40 z-30 flex items-end sm:items-center justify-center">
       <div
-        style={themeVars(settings.theme)}
+        style={themeVars(settings.theme, isDark)}
         className={`rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[85%] overflow-y-auto overflow-x-hidden ${
           themed('bg-[var(--t-surface)] text-[var(--t-text)]', 'bg-white dark:bg-ink-900')
         }`}

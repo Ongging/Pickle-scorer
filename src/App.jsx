@@ -189,6 +189,7 @@ export default function App() {
         screen={screen}
         gameState={gameState}
         theme={settings.theme}
+        isDark={isDark}
         showSettings={showSettings}
         onNewGame={onNewGame}
         onOpenHistory={() => { setHistoryReturnScreen(screen === 'history' ? historyReturnScreen : screen); setScreen('history'); }}
@@ -199,6 +200,7 @@ export default function App() {
             setupConfig={setupConfig}
             setSetupConfig={setSetupConfig}
             theme={settings.theme}
+            isDark={isDark}
             onStart={startGame}
             onOpenSettings={() => setShowSettings(true)}
             onOpenHistory={() => { setHistoryReturnScreen('setup'); setScreen('history'); }}
@@ -209,6 +211,7 @@ export default function App() {
             gameState={gameState}
             dispatch={dispatch}
             settings={settings}
+            isDark={isDark}
             casualTrackerVisible={casualTrackerVisible}
             setCasualTrackerVisible={changeCasualTrackerVisible}
             invalidFlash={invalidFlash}
@@ -225,6 +228,7 @@ export default function App() {
           <HistoryScreen
             history={history}
             theme={settings.theme}
+            isDark={isDark}
             onBack={() => setScreen(historyReturnScreen)}
             onToggleFavorite={toggleFavorite}
             onDelete={deleteGame}
@@ -234,6 +238,7 @@ export default function App() {
         {showSettings && (
           <SettingsPanel
             settings={settings}
+            isDark={isDark}
             onChange={changeSettings}
             onClose={() => setShowSettings(false)}
             casualTrackerVisible={casualTrackerVisible}
