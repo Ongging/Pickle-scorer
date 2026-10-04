@@ -13,7 +13,7 @@ const ANNOUNCE_SIZE_VW = { sm: '1.8vw', md: '2.4vw', lg: '3.2vw' };
  *    BroadcastChannel messages from the controlling window — the actual
  *    "TV shows only the score, my phone/laptop keeps the controls" case.
  */
-export function DisplayView({ gameState, settings, connected = true }) {
+export function DisplayView({ gameState, settings, connected = true, onExit }) {
   const theme = settings?.theme || 'minimalist';
   const hasScene = hasScenePanel(theme);
   const themed = (sceneClasses, defaultClasses) => (hasScene ? sceneClasses : defaultClasses);
@@ -54,6 +54,21 @@ export function DisplayView({ gameState, settings, connected = true }) {
           <div className="absolute top-6 right-6 text-xs font-display font-medium text-clay-600 bg-clay-50 px-3 py-1.5 rounded-full">
             Reconnecting…
           </div>
+        )}
+        {/* Only set when this is the in-app "Presentation mode" view
+            (ScoreboardScreen swapping itself out, not the pop-out
+            display.html window, which has no onExit and stays clean —
+            there's nothing to exit back to there). Low-key on purpose:
+            this is for the phone screen you're mirroring, not something
+            spectators looking at the mirrored output need to notice. */}
+        {onExit && (
+          <button
+            onClick={onExit}
+            className="absolute top-6 left-6 w-9 h-9 rounded-full bg-black/20 text-white/70 flex items-center justify-center text-lg active:bg-black/30"
+            aria-label="Exit presentation mode"
+          >
+            ×
+          </button>
         )}
         <div className={`w-full max-w-[1400px] rounded-[1.5vw] relative overflow-hidden ${hasScene ? themePanelClasses(theme, isDark) : 'bg-white dark:bg-ink-900'}`}>
           <div className={`absolute inset-y-[3vh] left-1/2 w-px -translate-x-1/2 ${hasScene ? themeDividerClasses(theme, isDark) : 'bg-ink-200 dark:bg-ink-700'}`} />

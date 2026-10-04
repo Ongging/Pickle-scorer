@@ -10,6 +10,7 @@ import { speakTinyTts, warmUpTinyTts, TINY_TTS_VOICE_ID } from '../lib/tinyTts';
 import { subscribeExternalDisplay, pickExternalScreen } from '../lib/externalDisplay';
 import { hasScenePanel, themePanelClasses, themeNameClasses, themeDividerClasses, themeServingClasses } from '../lib/themes';
 import { ScoreNumeral, ServeNumber } from './ui';
+import { DisplayView } from './DisplayView';
 
 const SCORE_SIZE = { sm: 'text-6xl', md: 'text-7xl', lg: 'text-8xl' };
 const LABEL_SIZE = { sm: 'text-xs', md: 'text-sm', lg: 'text-base' };
@@ -88,14 +89,25 @@ export function ScoreboardScreen({
   // documented behavior for that case is to navigate the CURRENT
   // WebView to the new URL instead of opening a second one — which is
   // exactly the "it took over the whole app and I had to restart"
-  // symptom. A real second-screen mirror on native would need a whole
-  // different mechanism (Android's Presentation API driving a second
-  // WebView instance via a native plugin) — a substantially bigger
-  // build than what's here, not something this toggles into. So on
-  // native this entire feature (the Monitor button AND the
-  // auto-detect prompt) stays hidden rather than attempting a version
-  // of it that would just break the app the same way.
+  // symptom. A TRUE second-screen mirror on native (controls on the
+  // phone, a separate clean view simultaneously on the TV) would need a
+  // whole different mechanism — Android's Presentation API driving a
+  // second WebView instance via a native plugin — a substantially
+  // bigger build than what's here. What native gets instead,
+  // below (`presenting`), is the practical version: swap THIS screen to
+  // a clean controls-free view and let Android's own built-in screen
+  // mirroring (Smart View/Chromecast/a wired adapter) carry that to a
+  // TV — no native plugin required, works today.
   const isNative = Capacitor.isNativePlatform();
+  const [presenting, setPresenting] = useState(false);
+  const enterPresentation = () => {
+    setPresenting(true);
+    document.documentElement.requestFullscreen?.().catch(() => {});
+  };
+  const exitPresentation = () => {
+    setPresenting(false);
+    if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+  };
 
   // Kept so the game-over prompt below can offer to close the window it
   // opened — window.open()'s return value isn't stored anywhere else.
@@ -180,6 +192,10 @@ export function ScoreboardScreen({
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [settings.keyBindings, showFaultButtons, onPoint, onFault, onUndo]);
 
+  if (presenting) {
+    return <DisplayView gameState={gameState} settings={settings} onExit={exitPresentation} />;
+  }
+
   return (
     <div className={`h-full flex flex-col ${themed('bg-[var(--t-surface)] text-[var(--t-text)]', 'bg-ink-50 dark:bg-ink-950 text-ink-950 dark:text-ink-50')}`}>
       <div className="flex items-center justify-between px-5 pt-6 pb-1">
@@ -191,11 +207,13 @@ export function ScoreboardScreen({
           {config.mode === 'traditional' ? 'traditional' : config.mode === 'rally' ? 'rally scoring' : 'casual'}
         </div>
         <div className="flex gap-1">
-          {!isNative && (
-            <button onClick={() => openDisplayWindow()} className={`p-2 rounded-full ${themed('bg-[var(--t-surface-alt)]', 'bg-ink-100 dark:bg-ink-800')}`} title="Open display window">
-              <Monitor size={18} />
-            </button>
-          )}
+          <button
+            onClick={isNative ? enterPresentation : () => openDisplayWindow()}
+            className={`p-2 rounded-full ${themed('bg-[var(--t-surface-alt)]', 'bg-ink-100 dark:bg-ink-800')}`}
+            title={isNative ? 'Presentation mode (mirror this screen to a TV)' : 'Open display window'}
+          >
+            <Monitor size={18} />
+          </button>
           <button onClick={onOpenHistory} className={`p-2 rounded-full lg:hidden ${themed('bg-[var(--t-surface-alt)]', 'bg-ink-100 dark:bg-ink-800')}`}>
             <HistoryIcon size={18} />
           </button>
