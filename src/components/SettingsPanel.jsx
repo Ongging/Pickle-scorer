@@ -187,7 +187,12 @@ function KeyBindingsEditor({ settings, onChange }) {
 }
 function VoicePicker({ settings, onChange }) {
   const [voices, setVoices] = useState([]);
-  const [tinyTtsState, setTinyTtsState] = useState('idle'); // idle | loading | error
+  // idle | loading | played | error | silent — 'silent' is specifically
+  // "the browser API reported success but no start/end event ever fired,
+  // so it almost certainly produced no sound" — different from 'error'
+  // (an actual exception), and the far more common failure on Android.
+  const [testState, setTestState] = useState('idle');
+  const [testDetail, setTestDetail] = useState('');
 
   useEffect(() => {
     if (!window.speechSynthesis) return;
@@ -202,33 +207,78 @@ function VoicePicker({ settings, onChange }) {
     if (isTinyTts) warmUpTinyTts();
   }, [isTinyTts]);
 
+  // Reset the "✓ Played" / error feedback a couple seconds after a
+  // successful test, so the button doesn't permanently stop saying "Test".
+  useEffect(() => {
+    if (testState !== 'played') return undefined;
+    const t = setTimeout(() => setTestState('idle'), 2500);
+    return () => clearTimeout(t);
+  }, [testState]);
+
   const testVoice = async () => {
     unlockAudioSession();
+    setTestDetail('');
+
     if (isTinyTts) {
-      setTinyTtsState('loading');
+      setTestState('loading');
       try {
         await speakTinyTts('7, 5, 1');
-        setTinyTtsState('idle');
+        setTestState('played');
       } catch (err) {
         console.error('On-device voice failed:', err);
-        setTinyTtsState('error');
+        setTestDetail(err?.message || String(err));
+        setTestState('error');
       }
       return;
     }
-    if (!window.speechSynthesis) return;
+
+    if (!window.speechSynthesis) {
+      setTestState('error');
+      setTestDetail('speechSynthesis is not available in this browser engine at all.');
+      return;
+    }
+
+    setTestState('loading');
     const utter = new SpeechSynthesisUtterance('7, 5, 1');
     const voice = voices.find((v) => v.voiceURI === settings.voiceURI);
     if (voice) utter.voice = voice;
+
+    // speechSynthesis.speak() doesn't throw when there's no real voice
+    // behind it (notably on Android WebView, which is what the
+    // Capacitor app runs on) — it just silently does nothing, no error
+    // event ever fires. A short timeout is the only way to actually
+    // notice that and say so, instead of leaving "Loading…" up forever.
+    let settled = false;
+    const timeout = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      setTestState('silent');
+    }, 2500);
+    utter.onstart = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      setTestState('played');
+    };
+    utter.onerror = (e) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      setTestDetail(e?.error || '');
+      setTestState('error');
+    };
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(utter);
   };
+
+  const noBrowserVoices = window.speechSynthesis && voices.length === 0;
 
   return (
     <div>
       <div className="flex items-center gap-2 min-w-0">
         <select
           value={settings.voiceURI || ''}
-          onChange={(e) => { onChange({ voiceURI: e.target.value || null }); setTinyTtsState('idle'); }}
+          onChange={(e) => { onChange({ voiceURI: e.target.value || null }); setTestState('idle'); setTestDetail(''); }}
           className="flex-1 min-w-0 px-3 py-2 rounded-lg bg-ink-100 dark:bg-ink-800 text-sm truncate"
           style={{ maxWidth: '100%' }}
         >
@@ -242,17 +292,34 @@ function VoicePicker({ settings, onChange }) {
         </select>
         <button
           onClick={testVoice}
-          disabled={tinyTtsState === 'loading'}
+          disabled={testState === 'loading'}
           className="px-3 py-2 rounded-lg bg-ink-100 dark:bg-ink-800 text-sm font-medium shrink-0 disabled:opacity-50"
         >
-          {tinyTtsState === 'loading' ? 'Loading…' : 'Test'}
+          {testState === 'loading' ? 'Loading…' : testState === 'played' ? '✓ Played' : 'Test'}
         </button>
       </div>
+
       {isTinyTts && (
         <p className="text-xs text-ink-500 dark:text-ink-400 mt-2">
-          {tinyTtsState === 'error'
-            ? "Couldn't load the on-device voice — falls back to your browser's default when this happens."
-            : 'Downloads a small speech model the first time you use it (needs internet then), and keeps working offline after that, even with WiFi off. Built on Piper, a well-established open-source voice engine.'}
+          {testState === 'error'
+            ? `Couldn't load the on-device voice${testDetail ? ` (${testDetail})` : ''} — falls back to your browser's default when this happens.`
+            : testState === 'played'
+              ? "That actually ran successfully. If you still didn't hear anything, it's almost certainly the emulator's audio, not the app — check the emulator window's own volume/speaker isn't muted, check your computer's volume, and try a real device if you can; emulator audio pass-through is notoriously unreliable."
+              : 'Downloads a small speech model the first time you use it (needs internet then), and keeps working offline after that, even with WiFi off. Built on Piper, a well-established open-source voice engine.'}
+        </p>
+      )}
+
+      {!isTinyTts && testState === 'silent' && (
+        <p className="text-xs text-clay-600 dark:text-clay-100 mt-2">
+          Didn't detect it actually starting. This is a known gap in Android's WebView (what the installed app runs on) — it often has no working text-to-speech engine wired up, even though the API itself appears to exist. The on-device voice above is the reliable option on Android.
+        </p>
+      )}
+      {!isTinyTts && testState === 'error' && testDetail && (
+        <p className="text-xs text-clay-600 dark:text-clay-100 mt-2">Error: {testDetail}</p>
+      )}
+      {!isTinyTts && noBrowserVoices && testState === 'idle' && (
+        <p className="text-xs text-ink-400 dark:text-ink-500 mt-2">
+          No system voices found yet — common on Android. The on-device voice above doesn't depend on this and is the more reliable choice there.
         </p>
       )}
       {!window.speechSynthesis && !isTinyTts && (

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { Capacitor } from '@capacitor/core';
 import {
   ArrowLeft, History as HistoryIcon, Settings, Plus,
   AlertTriangle, Volume2, Loader2, RotateCcw, RefreshCw, Monitor, X,
@@ -81,10 +82,26 @@ export function ScoreboardScreen({
   // reskinned per theme like everything else below.
   const themed = (sceneClasses, defaultClasses) => (hasScene ? sceneClasses : defaultClasses);
 
+  // Pop-out display window is web-only, and this isn't a style choice —
+  // window.open() cannot work in the native app at all. Capacitor's
+  // WebView doesn't support multiple windows, and Android's own
+  // documented behavior for that case is to navigate the CURRENT
+  // WebView to the new URL instead of opening a second one — which is
+  // exactly the "it took over the whole app and I had to restart"
+  // symptom. A real second-screen mirror on native would need a whole
+  // different mechanism (Android's Presentation API driving a second
+  // WebView instance via a native plugin) — a substantially bigger
+  // build than what's here, not something this toggles into. So on
+  // native this entire feature (the Monitor button AND the
+  // auto-detect prompt) stays hidden rather than attempting a version
+  // of it that would just break the app the same way.
+  const isNative = Capacitor.isNativePlatform();
+
   // Kept so the game-over prompt below can offer to close the window it
   // opened — window.open()'s return value isn't stored anywhere else.
   const displayWindowRef = useRef(null);
   const openDisplayWindow = (targetScreen) => {
+    if (isNative) return; // see note above — would break the native app
     if (targetScreen) {
       const { availLeft, availTop, availWidth, availHeight } = targetScreen;
       displayWindowRef.current = window.open(
@@ -129,13 +146,14 @@ export function ScoreboardScreen({
   const [showExternalPrompt, setShowExternalPrompt] = useState(false);
   const wasConnected = useRef(false);
   useEffect(() => {
+    if (isNative) return undefined; // see isNative note above
     const unsub = subscribeExternalDisplay((connected) => {
       if (connected && !wasConnected.current) setShowExternalPrompt(true);
       if (!connected) setShowExternalPrompt(false);
       wasConnected.current = connected;
     });
     return unsub;
-  }, []);
+  }, [isNative]);
   const acceptExternalDisplay = async () => {
     setShowExternalPrompt(false);
     openDisplayWindow(await pickExternalScreen());
@@ -173,9 +191,11 @@ export function ScoreboardScreen({
           {config.mode === 'traditional' ? 'traditional' : config.mode === 'rally' ? 'rally scoring' : 'casual'}
         </div>
         <div className="flex gap-1">
-          <button onClick={() => openDisplayWindow()} className={`p-2 rounded-full ${themed('bg-[var(--t-surface-alt)]', 'bg-ink-100 dark:bg-ink-800')}`} title="Open display window">
-            <Monitor size={18} />
-          </button>
+          {!isNative && (
+            <button onClick={() => openDisplayWindow()} className={`p-2 rounded-full ${themed('bg-[var(--t-surface-alt)]', 'bg-ink-100 dark:bg-ink-800')}`} title="Open display window">
+              <Monitor size={18} />
+            </button>
+          )}
           <button onClick={onOpenHistory} className={`p-2 rounded-full lg:hidden ${themed('bg-[var(--t-surface-alt)]', 'bg-ink-100 dark:bg-ink-800')}`}>
             <HistoryIcon size={18} />
           </button>
