@@ -4,6 +4,7 @@ import { storage } from './lib/storage';
 import { useAuth } from './lib/auth';
 import { useEntitlements } from './lib/entitlements';
 import { openDisplayChannel, broadcastGameState, HEARTBEAT_MS } from './lib/liveDisplay';
+import { pushStateToNative } from './lib/externalDisplay';
 import { SetupScreen } from './components/SetupScreen';
 import { ScoreboardScreen } from './components/ScoreboardScreen';
 import { SettingsPanel } from './components/SettingsPanel';
@@ -79,9 +80,12 @@ export default function App() {
 
     // Also re-broadcast on a fixed heartbeat regardless of whether
     // anything changed — a normal multi-second pause between rallies
-    // shouldn't read as "disconnected" on the display end.
+    // shouldn't read as "disconnected" on the display end. Also keeps
+    // a native Presentation window (if one's open) current the same
+    // way — pushStateToNative no-ops entirely on web.
     const heartbeat = setInterval(() => {
       broadcastGameState(channel, latestRef.current.gameState, latestRef.current.settings);
+      pushStateToNative(latestRef.current.gameState, latestRef.current.settings);
     }, HEARTBEAT_MS);
 
     return () => {
@@ -92,6 +96,7 @@ export default function App() {
   }, []);
   useEffect(() => {
     broadcastGameState(displayChannelRef.current, gameState, settings);
+    pushStateToNative(gameState, settings);
   }, [gameState, settings]);
 
   const changeSettings = useCallback((patch) => {

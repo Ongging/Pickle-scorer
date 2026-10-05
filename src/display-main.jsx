@@ -11,8 +11,23 @@ function DisplayApp() {
 
   useEffect(() => {
     lastMessageRef.current = Date.now();
+
+    // Native Presentation bridge (see android-plugin/ExternalDisplayPlugin.java
+    // and lib/externalDisplay.js's pushStateToNative): when this page is
+    // loaded inside the native second window rather than a web pop-out,
+    // state arrives by the native side calling this function directly via
+    // evaluateJavascript, not through BroadcastChannel — whether
+    // BroadcastChannel even spans two separate native WebView instances
+    // is unconfirmed, so this doesn't depend on it either way. Defined
+    // unconditionally; it's simply never called on the web path.
+    window.__applyNativeState = (state) => {
+      lastMessageRef.current = Date.now();
+      setPayload({ gameState: state.gameState, settings: state.settings });
+      setConnected(true);
+    };
+
     const channel = openDisplayChannel();
-    if (!channel) return;
+    if (!channel) return () => { delete window.__applyNativeState; };
     const onMessage = (event) => {
       if (event.data?.type !== 'state') return;
       lastMessageRef.current = Date.now();
@@ -30,7 +45,9 @@ function DisplayApp() {
     // fixed heartbeat regardless of change (see liveDisplay.js) — so a
     // normal pause between rallies doesn't look like a dropped
     // connection. Only flag it after missing several heartbeats' worth
-    // of silence, which means the tab/window really is gone.
+    // of silence, which means the tab/window really is gone. The native
+    // bridge above keeps the same lastMessageRef current too, so this
+    // check works the same way regardless of which path is live.
     const staleCheck = setInterval(() => {
       if (Date.now() - lastMessageRef.current > 8000) setConnected(false);
     }, 2000);
@@ -39,6 +56,7 @@ function DisplayApp() {
       channel.removeEventListener('message', onMessage);
       channel.close();
       clearInterval(staleCheck);
+      delete window.__applyNativeState;
     };
   }, []);
 

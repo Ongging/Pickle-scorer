@@ -1,22 +1,57 @@
 # External display plugin — setup
 
-This gives the Android app real detection of HDMI/wired monitors and
-most wireless "extend" displays, via `DisplayManager` — something a web
-page can never see. It's written but **not compiled or tested** (this
-environment can't reach the Android SDK/Gradle tooling); it needs
-Android Studio on a real machine, same as the rest of the Capacitor
-side of this project.
+This gives the Android app two things a web page can never have:
+real detection of HDMI/wired monitors and most wireless "extend"
+displays via `DisplayManager`, AND the ability to actually show the
+scoreboard on one via Android's `Presentation` API — a genuine second
+window, independent of the phone's own screen, so controls stay on
+the phone while a clean view shows on the TV at the same time.
+
+It's written but **not compiled or tested** — this environment can't
+reach the Android SDK/Gradle tooling. The API calls involved
+(`Plugin.getBridge()`, `Bridge.getLocalServer()` for serving the same
+bundled web assets to the second WebView, `Presentation`'s lifecycle)
+were checked line-by-line against Capacitor's own bundled source and
+Android's documented APIs — not guessed — but that's still a different
+thing from "built and confirmed on a real screen." It needs Android
+Studio on a real machine, same as the rest of the Capacitor side of
+this project, plus an actual external display (an HDMI adapter + any
+monitor is the easiest way to test) to really know it works.
 
 ## What it can and can't see
 
 - **Can see:** a wired/HDMI monitor, and wireless displays the OS
   treats as a genuine additional screen (most Miracast "extend"
-  setups).
+  setups). `present()` opens the real second window on exactly this
+  kind of display.
 - **Can't see:** plain screen mirroring/casting where Android
   duplicates the same framebuffer instead of creating a second
   `Display` object — some OEM "Smart View" / cast implementations work
   this way. That's a real Android platform limitation, not something
-  fixable from plugin code.
+  fixable from plugin code. (The app still has an answer for this case
+  — "Presentation mode" in ScoreboardScreen shows a clean view on the
+  phone's own screen for the user to mirror themselves via that OS
+  feature. It's the automatic fallback whenever `present()` isn't
+  available, including on a phone where this plugin was never wired
+  in at all.)
+
+## What each method does
+
+- `isConnected()` — current yes/no, for a one-off check.
+- `externalDisplayChanged` (event) — fires on connect/disconnect, so
+  the JS side can offer "show it there" the moment a display appears.
+- `present()` — opens a second WebView, hosted via `Presentation`, on
+  the first non-default `Display` found. Rejects if there isn't one
+  right now.
+- `dismiss()` — closes it.
+- `updateState({ json })` — pushes the latest game state into the
+  open second WebView. The JS side (`lib/externalDisplay.js`'s
+  `pushStateToNative`) calls this on every score change and on a
+  heartbeat, same cadence as the web pop-out window's BroadcastChannel
+  sync — this is deliberately NOT relying on BroadcastChannel itself,
+  since whether that spans two separate native WebView instances is
+  unconfirmed without testing. `evaluateJavascript` into the second
+  WebView is used instead, which is guaranteed to work.
 
 ## Setup (run once per fresh `android/` folder)
 
@@ -85,3 +120,27 @@ web-side detection on any platform.
 
 Steps 2 and 3 need repeating any time you delete and re-add the
 `android/` folder (e.g. `npx cap add android` again from scratch).
+
+## Testing checklist, once it's wired in and built
+
+Things worth actually checking on a real external display, roughly in
+order of "most likely to need a fix first":
+
+1. **Does it build at all** — a typo or an API that doesn't exist on
+   this Capacitor version would show up here first.
+2. **Tap the Monitor button with a display connected** — does the
+   second screen show the scoreboard? If `present()` is silently
+   failing, the app should fall back to Presentation Mode on the phone
+   itself instead (mirrors the behavior for "plugin not wired in" —
+   worth confirming that fallback path still works too).
+3. **Score a point** — does the external display update live? This is
+   the `updateState()`/`evaluateJavascript` bridge; if the display
+   opens but never updates, that's the first place to look.
+4. **Unplug the display mid-game** — does the app notice (no crash,
+   `activePresentation` cleared) rather than holding a dead reference?
+5. **End the game** — does the "Close the display window" prompt
+   appear, and does tapping it actually close the second window?
+6. **Font/theme rendering on the second screen** — since it's served
+   from the same bundled assets, it should look identical to the web
+   pop-out window and Presentation Mode, but a second WebView instance
+   rendering the same CSS is still worth an eyeball check.

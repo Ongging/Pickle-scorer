@@ -1,9 +1,10 @@
 /**
- * EXTERNAL DISPLAY DETECTION
+ * EXTERNAL DISPLAY
  * ---------------------------------------------------------------------
- * Goal: notice when a second screen becomes available and offer to open
- * the display window there, instead of making the user remember the
- * Monitor button exists.
+ * Goal: notice when a second screen becomes available, and actually
+ * show the scoreboard there — on native, a REAL second window via
+ * Android's Presentation API (see android-plugin/ExternalDisplayPlugin.java),
+ * not just a detection signal.
  *
  * Read this before changing anything — the honest scope of what this
  * can actually see:
@@ -23,19 +24,61 @@
  *   mirroring runs over WiFi Direct/Miracast or Chromecast under the
  *   hood, not classic Bluetooth), so there's nothing distinct to check
  *   for there beyond what's covered above.
- * - Native app (Capacitor/Android): a real native plugin can see far
- *   more — HDMI, wireless-display/Miracast routes, and Cast routes,
- *   via Android's DisplayManager + MediaRouter. That plugin is written
- *   in /android-plugin (see its README) but is NOT compiled into a
- *   build yet — it needs Android Studio on a real machine, and Claude's
- *   sandbox can't reach the Android/Gradle tooling to do that or test
- *   it. Until someone wires it in, registerPlugin() below degrades to
- *   a harmless no-op (no native implementation registered → the
- *   addListener call below is caught and simply never fires).
+ * - Native app (Capacitor/Android): the plugin in /android-plugin sees
+ *   HDMI and most wireless-display ("extend") routes via Android's
+ *   DisplayManager, and present() opens a real second window there —
+ *   controls stay on the phone, a clean view shows on the TV at the
+ *   same time. Written and reasoned carefully against Capacitor's own
+ *   source and Android's documented APIs, but NOT compiled or run by
+ *   Claude — this sandbox can't reach the Android/Gradle tooling, and
+ *   it needs a real external display to actually confirm. See its
+ *   README for wiring it in. Until that's done, registerPlugin() below
+ *   degrades to a harmless no-op (no native implementation registered →
+ *   every call below is caught and the caller falls back accordingly —
+ *   see ScoreboardScreen's use of present()/dismiss()).
  */
 import { Capacitor, registerPlugin } from '@capacitor/core';
 
 const ExternalDisplayNative = registerPlugin('ExternalDisplay');
+
+/**
+ * Opens a real second window on the external display (native only).
+ * Resolves true on success, false if there's no native plugin wired in
+ * yet or no external display is actually connected right now — callers
+ * should fall back to in-app Presentation Mode in that case.
+ */
+export async function presentOnNativeDisplay() {
+  try {
+    await ExternalDisplayNative.present();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Closes the native second window, if one is open. Safe to call anytime. */
+export async function dismissNativeDisplay() {
+  try {
+    await ExternalDisplayNative.dismiss();
+  } catch {
+    /* no native window open, or plugin not wired in — nothing to do */
+  }
+}
+
+/**
+ * Pushes the latest game state into the native second window, if one is
+ * currently open. Safe (and cheap) to call on every state change
+ * regardless of whether present() ever succeeded — the native side
+ * silently no-ops when nothing's being presented.
+ */
+export function pushStateToNative(gameState, settings) {
+  if (!Capacitor.isNativePlatform()) return;
+  try {
+    ExternalDisplayNative.updateState({ json: JSON.stringify({ gameState, settings }) });
+  } catch {
+    /* plugin not wired in yet — harmless no-op */
+  }
+}
 
 export function isWindowManagementSupported() {
   return typeof window !== 'undefined' && typeof window.screen?.isExtended === 'boolean';

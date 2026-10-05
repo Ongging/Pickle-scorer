@@ -7,7 +7,7 @@ import {
 import { sideFor, buildAnnouncement } from '../engine/rulesEngine';
 import { speechFriendly, unlockAudioSession } from '../lib/speech';
 import { speakTinyTts, warmUpTinyTts, TINY_TTS_VOICE_ID } from '../lib/tinyTts';
-import { subscribeExternalDisplay, pickExternalScreen } from '../lib/externalDisplay';
+import { subscribeExternalDisplay, pickExternalScreen, presentOnNativeDisplay, dismissNativeDisplay } from '../lib/externalDisplay';
 import { hasScenePanel, themePanelClasses, themeNameClasses, themeDividerClasses, themeServingClasses } from '../lib/themes';
 import { ScoreNumeral, ServeNumber } from './ui';
 import { DisplayView } from './DisplayView';
@@ -83,23 +83,32 @@ export function ScoreboardScreen({
   // reskinned per theme like everything else below.
   const themed = (sceneClasses, defaultClasses) => (hasScene ? sceneClasses : defaultClasses);
 
-  // Pop-out display window is web-only, and this isn't a style choice —
-  // window.open() cannot work in the native app at all. Capacitor's
-  // WebView doesn't support multiple windows, and Android's own
-  // documented behavior for that case is to navigate the CURRENT
-  // WebView to the new URL instead of opening a second one — which is
-  // exactly the "it took over the whole app and I had to restart"
-  // symptom. A TRUE second-screen mirror on native (controls on the
-  // phone, a separate clean view simultaneously on the TV) would need a
-  // whole different mechanism — Android's Presentation API driving a
-  // second WebView instance via a native plugin — a substantially
-  // bigger build than what's here. What native gets instead,
-  // below (`presenting`), is the practical version: swap THIS screen to
-  // a clean controls-free view and let Android's own built-in screen
-  // mirroring (Smart View/Chromecast/a wired adapter) carry that to a
-  // TV — no native plugin required, works today.
+  // Pop-out display window (window.open) is web-only — window.open()
+  // cannot work in the native app at all. Capacitor's WebView doesn't
+  // support multiple windows, and Android's own documented behavior for
+  // that case is to navigate the CURRENT WebView to the new URL instead
+  // of opening a second one — which is exactly the "it took over the
+  // whole app and I had to restart" symptom from testing this on a real
+  // emulator. Native gets two alternatives instead, tried in order by
+  // showOnExternalDisplay() below:
+  // 1. A REAL second window via Android's Presentation API, through the
+  //    native plugin in /android-plugin — controls stay on the phone, a
+  //    clean view shows on the TV at the same time, same as the web
+  //    pop-out gives you. Written and reasoned carefully against
+  //    Capacitor's own source and Android's documented APIs, but not
+  //    compiled or run by Claude (no Android/Gradle tooling in this
+  //    sandbox) — needs the wiring steps in its README, and a real
+  //    external display to confirm it actually works.
+  // 2. In-app "Presentation mode" (`presenting` below) — swaps THIS
+  //    screen to a clean controls-free view, which the user then mirrors
+  //    to a TV via Android's own built-in screen casting. No native
+  //    plugin needed, works today unconditionally, but gives up the
+  //    phone's controls screen while mirroring (one screen doing both
+  //    jobs, not two). Automatic fallback whenever (1) isn't available —
+  //    plugin not wired in yet, or genuinely no external display found.
   const isNative = Capacitor.isNativePlatform();
   const [presenting, setPresenting] = useState(false);
+  const [nativeDisplayActive, setNativeDisplayActive] = useState(false);
   const enterPresentation = () => {
     setPresenting(true);
     document.documentElement.requestFullscreen?.().catch(() => {});
@@ -107,6 +116,11 @@ export function ScoreboardScreen({
   const exitPresentation = () => {
     setPresenting(false);
     if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+  };
+  const showOnExternalDisplay = async () => {
+    const ok = await presentOnNativeDisplay();
+    if (ok) setNativeDisplayActive(true);
+    else enterPresentation(); // no native window available — fall back
   };
 
   // Kept so the game-over prompt below can offer to close the window it
@@ -130,44 +144,54 @@ export function ScoreboardScreen({
     );
   };
 
-  // Offer to close the display window once the game it was showing has
-  // ended — only when one is actually still open (not closed by hand
-  // already), and only once per game-over (wasGameOver guards against
-  // re-showing this on every re-render while gameOver stays true).
+  // Offer to close the display (pop-out window on web, the real native
+  // Presentation window on native) once the game it was showing has
+  // ended — only when one is actually still open, and only once per
+  // game-over (wasGameOver guards against re-showing this on every
+  // re-render while gameOver stays true). Presentation Mode isn't
+  // included here on purpose — exiting that is the always-visible "×"
+  // on the display itself, not something to prompt about.
   const [showCloseDisplayPrompt, setShowCloseDisplayPrompt] = useState(false);
   const wasGameOver = useRef(false);
   useEffect(() => {
     if (gameState.gameOver && !wasGameOver.current) {
-      if (displayWindowRef.current && !displayWindowRef.current.closed) {
+      if (nativeDisplayActive || (displayWindowRef.current && !displayWindowRef.current.closed)) {
         setShowCloseDisplayPrompt(true);
       }
     }
     if (!gameState.gameOver) setShowCloseDisplayPrompt(false);
     wasGameOver.current = gameState.gameOver;
-  }, [gameState.gameOver]);
+  }, [gameState.gameOver, nativeDisplayActive]);
   const closeDisplayWindow = () => {
     displayWindowRef.current?.close();
     displayWindowRef.current = null;
+    if (nativeDisplayActive) {
+      dismissNativeDisplay();
+      setNativeDisplayActive(false);
+    }
     setShowCloseDisplayPrompt(false);
   };
 
-  // External-display auto-detect: offer to open the display window the
+  // External-display auto-detect: offer to show the scoreboard there the
   // moment a second screen shows up, instead of relying on someone to
   // notice the Monitor button. See lib/externalDisplay.js for exactly
-  // what this can and can't see.
+  // what this can and can't see (web vs native differ quite a bit).
   const [showExternalPrompt, setShowExternalPrompt] = useState(false);
   const wasConnected = useRef(false);
   useEffect(() => {
-    if (isNative) return undefined; // see isNative note above
     const unsub = subscribeExternalDisplay((connected) => {
       if (connected && !wasConnected.current) setShowExternalPrompt(true);
       if (!connected) setShowExternalPrompt(false);
       wasConnected.current = connected;
     });
     return unsub;
-  }, [isNative]);
+  }, []);
   const acceptExternalDisplay = async () => {
     setShowExternalPrompt(false);
+    if (isNative) {
+      await showOnExternalDisplay();
+      return;
+    }
     openDisplayWindow(await pickExternalScreen());
   };
 
@@ -208,9 +232,9 @@ export function ScoreboardScreen({
         </div>
         <div className="flex gap-1">
           <button
-            onClick={isNative ? enterPresentation : () => openDisplayWindow()}
+            onClick={isNative ? showOnExternalDisplay : () => openDisplayWindow()}
             className={`p-2 rounded-full ${themed('bg-[var(--t-surface-alt)]', 'bg-ink-100 dark:bg-ink-800')}`}
-            title={isNative ? 'Presentation mode (mirror this screen to a TV)' : 'Open display window'}
+            title={isNative ? 'Show on external display' : 'Open display window'}
           >
             <Monitor size={18} />
           </button>
