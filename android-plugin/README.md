@@ -69,19 +69,19 @@ it, and gets copied in after each regeneration.
    `MainActivity.java`:
    ```
    cp android-plugin/ExternalDisplayPlugin.java \
-      android/app/src/main/java/com/example/pickleballscorer/
+      android/app/src/main/java/com/ongging/pickleballscorer/
    ```
-   (If you've since changed `appId` in `capacitor.config.json` away
-   from the `com.example.pickleballscorer` placeholder, use the
-   matching package path under `android/app/src/main/java/` instead,
-   and update the `package` line at the top of
-   `ExternalDisplayPlugin.java` to match.)
+   (That's this project's real `appId` — `com.ongging.pickleballscorer`
+   — both here and in `capacitor.config.json`. If you ever change it
+   again, update the `package` line at the top of
+   `ExternalDisplayPlugin.java` to match, and copy to the new path
+   instead.)
 
 3. Register the plugin in `MainActivity.java`
-   (`android/app/src/main/java/com/example/pickleballscorer/MainActivity.java`).
+   (`android/app/src/main/java/com/ongging/pickleballscorer/MainActivity.java`).
    It currently reads:
    ```java
-   package com.example.pickleballscorer;
+   package com.ongging.pickleballscorer;
 
    import com.getcapacitor.BridgeActivity;
 
@@ -89,7 +89,7 @@ it, and gets copied in after each regeneration.
    ```
    Change it to:
    ```java
-   package com.example.pickleballscorer;
+   package com.ongging.pickleballscorer;
 
    import android.os.Bundle;
    import com.getcapacitor.BridgeActivity;

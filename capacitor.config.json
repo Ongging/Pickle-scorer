@@ -1,5 +1,5 @@
 {
-  "appId": "com.example.pickleballscorer",
+  "appId": "com.ongging.pickleballscorer",
   "appName": "Pickleball Scorer",
   "webDir": "dist",
   "bundledWebRuntime": false,
